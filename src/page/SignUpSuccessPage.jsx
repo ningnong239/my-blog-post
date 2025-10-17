@@ -1,4 +1,5 @@
-import { NavBar, Footer } from "@/components/WebSection";
+import { NavBar } from "@/components/NavBar";
+import { Footer } from "@/components/Footer";
 import { Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 

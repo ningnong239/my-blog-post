@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { AdminSidebar } from "@/components/AdminWebSection";
+import { AdminSidebar } from "@/components/AdminSidebar";
 import axios from "axios";
 import { toast } from "sonner";
 import { X } from "lucide-react";
@@ -25,7 +25,7 @@ export default function AdminCreateCategoryPage() {
     try {
       // Send POST request to create the category
       await axios.post(
-        "https://blog-post-project-api-with-db.vercel.app/categories",
+        "http://localhost:4001/categories",
         {
           name: categoryName,
         }
