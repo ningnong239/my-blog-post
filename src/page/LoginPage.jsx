@@ -39,28 +39,45 @@ export default function LoginPage() {
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log("=== LOGIN PAGE SUBMIT START ===");
+    console.log("Form values:", formValues);
+    
     const errors = validateInputs();
+    console.log("Validation errors:", errors);
     setFormErrors(errors);
 
     if (Object.keys(errors).length === 0) {
-      const result = await login(formValues);
-      if (result?.error) {
-        return toast.custom((t) => (
-          <div className="bg-red-500 text-white p-4 rounded-sm flex justify-between items-start">
-            <div>
-              <h2 className="font-bold text-lg mb-1">{result.error}</h2>
-              <p className="text-sm">Please try another password or email</p>
+      console.log("No validation errors, attempting login...");
+      console.log("Login attempt with:", formValues);
+      
+      try {
+        const result = await login(formValues);
+        console.log("Login result:", result);
+        
+        if (result?.error) {
+          console.log("Login error:", result.error);
+          return toast.custom((t) => (
+            <div className="bg-red-500 text-white p-4 rounded-sm flex justify-between items-start">
+              <div>
+                <h2 className="font-bold text-lg mb-1">{result.error}</h2>
+                <p className="text-sm">Please try another password or email</p>
+              </div>
+              <button
+                onClick={() => toast.dismiss(t)}
+                className="text-white hover:text-gray-200"
+              >
+                <X size={20} />
+              </button>
             </div>
-            <button
-              onClick={() => toast.dismiss(t)}
-              className="text-white hover:text-gray-200"
-            >
-              <X size={20} />
-            </button>
-          </div>
-        ));
+          ));
+        }
+        console.log("=== LOGIN PAGE SUCCESS ===");
+      } catch (error) {
+        console.log("=== LOGIN PAGE ERROR ===");
+        console.log("Login page error:", error);
       }
-      navigate("/");
+    } else {
+      console.log("Validation errors found, not attempting login");
     }
   };
 

@@ -17,8 +17,9 @@ import AdminCreateCategoryPage from "./page/admin/AdminCreateCategoryPage";
 import AdminEditCategoryPage from "./page/admin/AdminEditCategoryPage";
 import AdminEditArticlePage from "./page/admin/AdminEditArticlePage";
 import AdminLoginPage from "./page/admin/AdminLoginPage";
+
 // import AdminNotificationPage from "./page/admin/AdminNotificationPage";
-import { useAuth } from "@/contexts/authentication"; // Import useAuth to check auth state
+import { useAuth, AuthProvider } from "@/contexts/authentication"; // Import useAuth to check auth state
 import jwtInterceptor from "./utils/jwtIntercepter.js";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import AuthenticationRoute from "./components/auth/AuthenticationRoute";
@@ -29,8 +30,9 @@ function App() {
   const { isAuthenticated, state } = useAuth();
 
   return (
-    <div className="App">
-      <Routes>
+    <AuthProvider>
+      <div className="App">
+        <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/post/:postId" element={<ViewPostPage />} />
         <Route path="*" element={<NotFoundPage />} />
@@ -220,12 +222,13 @@ function App() {
         />
       </Routes>
 
-      <Toaster
-        toastOptions={{
-          unstyled: true,
-        }}
-      />
-    </div>
+        <Toaster
+          toastOptions={{
+            unstyled: true,
+          }}
+        />
+      </div>
+    </AuthProvider>
   );
 }
 
