@@ -18,7 +18,7 @@ import {
   X,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
-import authorImage from "../assets/author-image.jpeg";
+import authorImage from "../assets/ning.jpg";
 import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -50,7 +50,7 @@ export default function ViewPost() {
     setIsLoading(true);
     try {
       const postsResponse = await axios.get(
-        `https://blog-post-project-api-with-db.vercel.app/posts/${param.postId}`
+        `http://localhost:4001/posts/${param.postId}`
       );
       setImg(postsResponse.data.image);
       setTitle(postsResponse.data.title);
@@ -59,11 +59,11 @@ export default function ViewPost() {
       setCategory(postsResponse.data.category);
       setContent(postsResponse.data.content);
       const likesResponse = await axios.get(
-        `https://blog-post-project-api-with-db.vercel.app/posts/${param.postId}/likes`
+        `http://localhost:4001/posts/${param.postId}/likes`
       );
       setLikes(likesResponse.data.like_count);
       const commentsResponse = await axios.get(
-        `https://blog-post-project-api-with-db.vercel.app/posts/${param.postId}/comments`
+        `http://localhost:4001/posts/${param.postId}/comments`
       );
       setComments(commentsResponse.data);
       setIsLoading(false);
@@ -155,13 +155,13 @@ function Share({ likesAmount, setDialogState, user, setLikes }) {
       // First try to like the post
       try {
         await axios.post(
-          `https://blog-post-project-api-with-db.vercel.app/posts/${param.postId}/likes`
+          `http://localhost:4001/posts/${param.postId}/likes`
         );
       } catch (error) {
         // If we get a 500 error, assume the post is already liked and try to unlike
         if (error.response?.status === 500) {
           await axios.delete(
-            `https://blog-post-project-api-with-db.vercel.app/posts/${param.postId}/likes`
+            `http://localhost:4001/posts/${param.postId}/likes`
           );
         } else {
           // If it's a different error, throw it to be caught by the outer try-catch
@@ -171,7 +171,7 @@ function Share({ likesAmount, setDialogState, user, setLikes }) {
 
       // After either liking or unliking, get the updated like count
       const likesResponse = await axios.get(
-        `https://blog-post-project-api-with-db.vercel.app/posts/${param.postId}/likes`
+        `http://localhost:4001/posts/${param.postId}/likes`
       );
       setLikes(likesResponse.data.like_count);
     } catch (error) {
@@ -266,11 +266,11 @@ function Comment({ setDialogState, commentList, setComments, user }) {
       setIsError(false);
       setCommentText("");
       await axios.post(
-        `https://blog-post-project-api-with-db.vercel.app/posts/${param.postId}/comments`,
+        `http://localhost:4001/posts/${param.postId}/comments`,
         { comment: commentText }
       );
       const commentsResponse = await axios.get(
-        `https://blog-post-project-api-with-db.vercel.app/posts/${param.postId}/comments`
+        `http://localhost:4001/posts/${param.postId}/comments`
       );
       setComments(commentsResponse.data);
       toast.custom((t) => (

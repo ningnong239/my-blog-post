@@ -1,4 +1,6 @@
-import { NavBar, HeroSection, Footer } from "@/components/WebSection";
+import { NavBar } from "@/components/NavBar";
+import { HeroSection } from "@/components/HeroSection";
+import { Footer } from "@/components/Footer";
 import ArticlesSection from "@/components/ArticlesSection";
 
 export default function HomePage() {

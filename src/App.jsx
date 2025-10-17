@@ -16,6 +16,7 @@ import AdminCreateArticlePage from "./page/admin/AdminCreateArticle";
 import AdminCreateCategoryPage from "./page/admin/AdminCreateCategoryPage";
 import AdminEditCategoryPage from "./page/admin/AdminEditCategoryPage";
 import AdminEditArticlePage from "./page/admin/AdminEditArticlePage";
+import AdminLoginPage from "./page/admin/AdminLoginPage";
 // import AdminNotificationPage from "./page/admin/AdminNotificationPage";
 import { useAuth } from "@/contexts/authentication"; // Import useAuth to check auth state
 import jwtInterceptor from "./utils/jwtIntercepter.js";
@@ -68,6 +69,7 @@ function App() {
             </AuthenticationRoute>
           }
         />
+        <Route path="/admin/login" element={<AdminLoginPage />} />
 
         {/* User Section */}
         <Route

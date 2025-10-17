@@ -1,6 +1,7 @@
 /* eslint-disable react/prop-types */
 import { useState } from "react";
-import { NavBar, Footer } from "@/components/WebSection";
+import { NavBar } from "@/components/NavBar";
+import { Footer } from "@/components/Footer";
 import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -52,7 +53,7 @@ export default function ResetPasswordPage() {
       setIsDialogOpen(false);
 
       const response = await axios.put(
-        `https://blog-post-project-api-with-db.vercel.app/auth/reset-password`,
+        `http://localhost:4001/auth/reset-password`,
         {
           oldPassword: password,
           newPassword: newPassword,
