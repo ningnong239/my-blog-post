@@ -1,5 +1,4 @@
 /* eslint-disable react/prop-types */
-import authorImage from "../assets/author-image.jpeg";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { Search, Loader2 } from "lucide-react";
@@ -13,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "./ui/skeleton";
+import { BlogCard } from "./BlogCard";
 
 export default function Articles() {
   // const categories = ["Highlight", "Cat", "Inspiration", "General"];
@@ -35,7 +35,7 @@ export default function Articles() {
       const fetchCategories = async () => {
         try {
           const responseCategories = await axios.get(
-            "https://blog-post-project-api-with-db.vercel.app/categories"
+            "http://localhost:4001/categories"
           );
           setCategories(responseCategories.data);
           setIsFirstTimeRender(false); // Mark the first render logic as done
@@ -54,7 +54,7 @@ export default function Articles() {
       setIsLoading(true); // Start loading
       try {
         const response = await axios.get(
-          `https://blog-post-project-api-with-db.vercel.app/posts?page=${page}&limit=6${
+          `http://localhost:4001/posts?page=${page}&limit=6${
             category !== "Highlight" ? `&category=${category}` : ""
           }`
         );
@@ -81,7 +81,7 @@ export default function Articles() {
       const fetchSuggestions = async () => {
         try {
           const response = await axios.get(
-            `https://blog-post-project-api-with-db.vercel.app/posts?keyword=${searchKeyword}`
+            `http://localhost:4001/posts?keyword=${searchKeyword}`
           );
           setSuggestions(response.data.posts); // Set search suggestions
           setIsLoading(false);
@@ -103,7 +103,7 @@ export default function Articles() {
   return (
     <div className="w-full max-w-7xl mx-auto md:px-6 lg:px-8 mb-20">
       <h2 className="text-xl font-bold mb-4 px-4">Latest articles</h2>
-      <div className="bg-[#EFEEEB] px-4 py-4 md:py-3 md:rounded-sm flex flex-col space-y-4 md:gap-16 md:flex-row-reverse md:items-center md:space-y-0 md:justify-between mb-10">
+      <div className="bg-red-500 px-4 py-4 md:py-3 md:rounded-sm flex flex-col space-y-4 md:gap-16 md:flex-row-reverse md:items-center md:space-y-0 md:justify-between mb-10">
         <div className="w-full md:max-w-sm">
           <div className="relative">
             <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -250,45 +250,4 @@ export default function Articles() {
   );
 }
 
-function BlogCard({ id, image, category, title, description, author, date }) {
-  const navigate = useNavigate();
-  return (
-    <div className="flex flex-col gap-4">
-      <button
-        onClick={() => navigate(`/post/${id}`)}
-        className="relative h-[212px] sm:h-[360px]"
-      >
-        <img
-          className="w-full h-full object-cover rounded-md"
-          src={image}
-          alt={title}
-        />
-      </button>
-      <div className="flex flex-col">
-        <div className="flex">
-          <span className="bg-green-200 rounded-full px-3 py-1 text-sm font-semibold text-green-600 mb-2">
-            {category}
-          </span>
-        </div>
-        <button onClick={() => navigate(`/post/${id}`)}>
-          <h2 className="text-start font-bold text-xl mb-2 line-clamp-2 hover:underline">
-            {title}
-          </h2>
-        </button>
-        <p className="text-muted-foreground text-sm mb-4 flex-grow line-clamp-3">
-          {description}
-        </p>
-        <div className="flex items-center text-sm">
-          <img
-            className="w-8 h-8 object-cover rounded-full mr-2"
-            src={authorImage}
-            alt={author}
-          />
-          <span>{author}</span>
-          <span className="mx-2 text-gray-300">|</span>
-          <span>{date}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
+

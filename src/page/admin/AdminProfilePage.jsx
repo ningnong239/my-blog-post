@@ -3,7 +3,7 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { AdminSidebar } from "@/components/AdminWebSection";
+import { AdminSidebar } from "@/components/AdminSidebar";
 import { useAuth } from "@/contexts/authentication";
 import { toast } from "sonner";
 import axios from "axios";
@@ -127,7 +127,7 @@ export default function AdminProfilePage() {
       }
 
       await axios.put(
-        "https://blog-post-project-api-with-db.vercel.app/profile",
+        "http://localhost:4001/profile",
         formData,
         {
           headers: { "Content-Type": "multipart/form-data" },

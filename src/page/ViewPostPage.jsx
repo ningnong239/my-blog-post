@@ -1,4 +1,5 @@
-import { NavBar, Footer } from "@/components/WebSection";
+import { NavBar } from "@/components/NavBar";
+import { Footer } from "@/components/Footer";
 import ViewPost from "@/components/ViewPost";
 
 export default function ViewPostPage() {

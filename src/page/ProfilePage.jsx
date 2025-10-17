@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { NavBar, Footer } from "@/components/WebSection";
+import { NavBar } from "@/components/NavBar";
+import { Footer } from "@/components/Footer";
 import { useNavigate } from "react-router-dom";
 import { X, User, Lock } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -128,7 +129,7 @@ export default function ProfilePage() {
       }
 
       await axios.put(
-        "https://blog-post-project-api-with-db.vercel.app/profile",
+        "http://localhost:4001/profile",
         formData,
         {
           headers: { "Content-Type": "multipart/form-data" },

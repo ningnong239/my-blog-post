@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { NavBar, Footer } from "@/components/WebSection";
+import { NavBar } from "@/components/NavBar";
+import { Footer } from "@/components/Footer";
 import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/authentication";
@@ -110,7 +111,7 @@ export default function SignUpPage() {
     <div className="flex flex-col min-h-screen">
       <NavBar />
       <main className="flex justify-center items-center p-4 my-6 flex-grow">
-        <div className="w-full max-w-2xl bg-[#EFEEEB] rounded-sm shadow-md px-3 sm:px-20 py-14">
+        <div className="w-full max-w-2xl bg-blue-500 rounded-sm shadow-md px-3 sm:px-20 py-14">
           <h2 className="text-4xl font-semibold text-center mb-6 text-foreground">
             Sign up
           </h2>
@@ -118,7 +119,7 @@ export default function SignUpPage() {
             <div className="relative space-y-1">
               <label
                 htmlFor="name"
-                className="block text-sm font-medium text-muted-foreground"
+                className="block text-sm font-medium text-muted-foreground text-black"
               >
                 Name
               </label>
@@ -141,7 +142,7 @@ export default function SignUpPage() {
             <div className="relative space-y-1">
               <label
                 htmlFor="username"
-                className="block text-sm font-medium text-muted-foreground"
+                className="block text-sm font-medium text-muted-foreground text-black"
               >
                 Username
               </label>
@@ -164,7 +165,7 @@ export default function SignUpPage() {
             <div className="relative space-y-1">
               <label
                 htmlFor="email"
-                className="block text-sm font-medium text-muted-foreground"
+                className="block text-sm font-medium text-muted-foreground text-black"
               >
                 Email
               </label>
@@ -188,7 +189,7 @@ export default function SignUpPage() {
             <div className="relative space-y-1">
               <label
                 htmlFor="password"
-                className="block text-sm font-medium text-muted-foreground"
+                className="block text-sm font-medium text-muted-foreground text-black"
               >
                 Password
               </label>
@@ -212,7 +213,7 @@ export default function SignUpPage() {
             <div className="flex justify-center">
               <button
                 type="submit"
-                className="px-8 py-2 bg-foreground text-white rounded-full hover:bg-muted-foreground transition-colors flex items-center gap-1"
+                className="px-8 py-2 bg-orange-500 text-black rounded-full hover:bg-orange-600 transition-colors flex items-center gap-1"
                 disabled={state.loading}
               >
                 {state.loading ? (
@@ -224,7 +225,7 @@ export default function SignUpPage() {
               </button>
             </div>
           </form>
-          <p className="flex flex-row justify-center gap-1 mt-4 text-sm text-center pt-2 text-muted-foreground font-medium">
+          <p className="flex flex-row justify-center gap-1 mt-4 text-sm text-center pt-2 text-muted-foreground font-medium text-black">
             Already have an account?{" "}
             <a
               onClick={() => navigate("/login")}
