@@ -2,85 +2,211 @@ export const blogPosts = [
   {
     id: 1,
     image:
-      "https://res.cloudinary.com/dcbpjtd1r/image/upload/v1728449771/my-blog-post/e739huvlalbfz9eynysc.jpg",
-    category: "General",
-    title: "The Art of Mindfulness: Finding Peace in a Busy World",
+      "https://wallpaperaccess.com/full/1947431.jpg",
+    category: "Dev",
+    title: "Getting Started as a Developer: Your First Steps into the Programming World",
     description:
-      "Discover the transformative power of mindfulness and how it can help you navigate the challenges of modern life with greater ease and contentment.",
-    author: "Thompson P.",
-    date: "11 September 2024",
-    likes: 321,
+      "A beginner-friendly guide for those interested in becoming a developer—covering the essentials, must-have skills, and practical tips to kickstart your dev career.",
+    author: "Naiyana T.",
+    date: "18 October 2025",
+    likes: 199,
     content:
-      "## 1. Understanding Mindfulness\n\nMindfulness is the practice of being fully present and engaged in the moment, aware of your thoughts and feelings without distraction or judgment.\n\n## 2. Benefits of Mindfulness\n\nRegular mindfulness practice can reduce stress, improve focus, enhance emotional regulation, and boost overall well-being.\n\n## 3. Simple Mindfulness Techniques\n\nLearn easy-to-implement mindfulness exercises, from deep breathing to body scans, that you can incorporate into your daily routine.\n\n## 4. Mindfulness in Daily Life\n\nDiscover how to bring mindfulness into everyday activities, from eating to working, to create a more balanced and fulfilling life.\n\n## 5. Overcoming Challenges\n\nAddress common obstacles to mindfulness practice and learn strategies to maintain consistency in your mindfulness journey.",
+      `## 1. What is a Developer?
+
+A developer, or programmer, is someone who builds and creates software, websites, or applications to fulfill user needs and solve problems.
+
+## 2. Essential Skills for Aspiring Devs
+
+- Problem-solving and logical thinking
+- Basic knowledge of programming (e.g., HTML, CSS, JavaScript)
+- Learning popular languages like JavaScript, Python, or Java
+
+## 3. Types of Developer Roles
+
+- **Frontend Developer:** Focuses on the visual part of websites/apps (UI/UX)
+- **Backend Developer:** Deals with the server, databases, and logic behind the scenes
+- **Full Stack Developer:** Skilled in both frontend and backend development
+
+## 4. Tools & Learning Resources
+
+- Git and GitHub for version control and collaboration
+- Online communities and tutorials like Stack Overflow, YouTube, FreeCodeCamp, or Codecademy
+- Practice building your own projects to gain hands-on experience
+
+## 5. Tips for Beginners
+
+- Set small, achievable goals
+- Don't be afraid to make mistakes—trial and error is a great teacher
+- Join developer communities to share, learn, and grow together
+      `,
   },
   {
     id: 2,
     image:
-      "https://res.cloudinary.com/dcbpjtd1r/image/upload/v1728449771/my-blog-post/gsutzgam24abrvgee9r4.jpg",
-    category: "Cat",
-    title: "The Secret Language of Cats: Decoding Feline Communication",
+      "https://th.bing.com/th/id/R.f1e57c17c4c4bfd213a606cfbc892ad5?rik=UVUvyLb72S28Dg&riu=http%3a%2f%2fmoneyhub.in.th%2fwp-content%2fuploads%2f2015%2f09%2fshutterstock_220298206.jpg&ehk=0dG7UWV2AvtPqXHUB9Ce6CpHle4GKZsq%2bRtUB9liZb0%3d&risl=&pid=ImgRaw&r=0",
+    category: "LifeStyle",
+    title: "Cooking in English: Essential Vocabulary and Phrases for the Kitchen",
     description:
-      "Unravel the mysteries of cat communication and learn how to better understand your feline friend's needs and desires.",
-    author: "Thompson P.",
+      "Expand your English skills with must-know vocabulary, phrases, and conversations for cooking and following recipes.",
+    author: "Naiyana T.",
     date: "21 August 2024",
     likes: 123,
     content:
-      "## 1. Vocal Communications\n\nExplore the various meows, purrs, and other vocalizations cats use to express themselves.\n\n## 2. Body Language\n\nLearn to read your cat's posture, tail position, and ear movements to understand their mood and intentions.\n\n## 3. Scent Marking\n\nDiscover why cats use scent to communicate and mark their territory.\n\n## 4. Facial Expressions\n\nUnderstand the subtle facial cues cats use to convey emotions and intentions.\n\n## 5. Interspecies Communication\n\nLearn how cats have adapted their communication methods to interact with humans and other animals.",
+      `## 1. Common Cooking Verbs
+
+- **Boil** (ต้ม)
+- **Chop** (หั่น)
+- **Stir** (คน)
+- **Fry** (ทอด)
+- **Bake** (อบ)
+- **Grill** (ย่าง)
+- **Peel** (ปอกเปลือก)
+- **Mix** (ผสม)
+- **Roast** (อบ/ปิ้ง)
+
+## 2. Essential Kitchen Vocabulary
+
+- **Pot** (หม้อ)
+- **Pan** (กระทะ)
+- **Knife** (มีด)
+- **Spoon** (ช้อน)
+- **Fork** (ส้อม)
+- **Bowl** (ชาม)
+- **Oven** (เตาอบ)
+- **Stove** (เตา)
+
+## 3. Useful Cooking Phrases
+
+- "Please chop the onions."
+- "How many eggs do we need?"
+- "Simmer the soup for 10 minutes."
+- "Can you pass me the salt?"
+- "Preheat the oven to 180 degrees."
+
+## 4. Reading a Recipe in English
+
+1. Gather all the ingredients.
+2. Slice the vegetables.
+3. Heat the oil in a pan.
+4. Add the vegetables and stir-fry for 5 minutes.
+5. Serve hot.
+
+## 5. Sample Conversation
+
+**A:** What are you cooking today?  
+**B:** I'm making stir-fried chicken with vegetables.  
+**A:** Can I help you?  
+**B:** Sure! Please wash and chop the carrots.
+
+Cooking is a great way to learn new English words and practice speaking. Enjoy your meal! 🍳`,
   },
   {
     id: 3,
     image:
-      "https://res.cloudinary.com/dcbpjtd1r/image/upload/v1728449771/my-blog-post/zzye4nxfm3pmh81z7hni.jpg",
-    category: "Inspiration",
-    title: "Embracing Change: How to Thrive in Times of Transition",
+      "https://tse3.mm.bing.net/th/id/OIP.BIWltfRDERVV4TThY3CWBwHaE8?rs=1&pid=ImgDetMain&o=7&rm=3",
+    category: "LifeStyle",
+    title: "Movie Night: Learning English While Watching Films",
     description:
-      "Learn powerful strategies to navigate life's changes with grace and emerge stronger on the other side.",
-    author: "Thompson P.",
-    date: "23 March 2024",
+      "Unlock effective ways to improve your English skills by watching movies, including tips for active viewing and vocabulary building.",
+    author: "Naiyana T.",
+    date: "18 October 2025",
     likes: 21,
     content:
-      "## 1. Understanding Change\n\nExplore the nature of change and why it's an essential part of personal growth and development.\n\n## 2. Overcoming Fear of Change\n\nLearn techniques to confront and overcome the anxiety often associated with major life transitions.\n\n## 3. Adapting to New Situations\n\nDiscover strategies for quickly adapting to new environments, roles, or circumstances.\n\n## 4. Finding Opportunities in Change\n\nLearn how to identify and capitalize on the opportunities that often arise during periods of transition.\n\n## 5. Building Resilience\n\nDevelop the mental and emotional resilience needed to thrive in an ever-changing world.",
+      `## 1. Benefits of Watching Movies to Learn English
+
+Watching movies is an enjoyable way to enhance your listening skills, expand your vocabulary, and get familiar with different accents.
+
+## 2. Movie Genres You Can Try
+
+- Comedy (ตลก)
+- Drama (ดราม่า)
+- Action (แอ็คชั่น)
+- Animation (แอนิเมชัน)
+- Documentary (สารคดี)
+- Romance (โรแมนติก)
+
+## 3. Tips for Learning Effectively
+
+- **Turn on English subtitles** for better understanding.
+- **Pause and rewind** if you miss something or want to hear a word again.
+- **Write down new vocabulary** and search for their meanings later.
+- **Repeat sentences aloud** to practice speaking and pronunciation.
+
+## 4. Useful Movie-Related Vocabulary
+
+- **Plot** (เนื้อเรื่อง)
+- **Character** (ตัวละคร)
+- **Scene** (ฉาก)
+- **Director** (ผู้กำกับ)
+- **Actor/Actress** (นักแสดงชาย/หญิง)
+- **Soundtrack** (เพลงประกอบภาพยนตร์)
+- **Sequel** (ภาคต่อ)
+- **Subtitle** (คำบรรยาย)
+
+## 5. Sample Dialogue at the Cinema
+
+**A:** What movie do you want to watch tonight?  
+**B:** Let’s see a comedy. I need a laugh!  
+**A:** Should we buy tickets in advance?  
+**B:** Yes, and don’t forget the popcorn!
+
+Watching movies regularly makes learning English fun and natural. Pick your favorite genres and enjoy practicing English during your next movie night! 🍿`,
   },
   {
     id: 4,
     image:
-      "https://res.cloudinary.com/dcbpjtd1r/image/upload/v1728449771/my-blog-post/e0haxst38li4g8i0vpsr.jpg",
+      "https://i.ytimg.com/vi/X1tBEKFYKJg/maxresdefault.jpg",
     category: "General",
-    title: "The Future of Work: Adapting to a Digital-First Economy",
+    title: "Level Up! The Benefits of Playing Games",
     description:
-      "Explore how technology is reshaping the workplace and learn skills to succeed in the evolving job market.",
-    author: "Thompson P.",
-    date: "23 May 2024",
+      "Discover how playing games can improve your skills, creativity, and English vocabulary, along with tips for balanced gaming.",
+    author: "Naiyana T",
+    date: "18 October 2025",
     likes: 32,
     content:
-      "## 1. The Digital Transformation\n\nUnderstand how digital technologies are revolutionizing industries and job roles.\n\n## 2. Remote Work Revolution\n\nExplore the benefits and challenges of remote work and how to thrive in a distributed team.\n\n## 3. Essential Digital Skills\n\nDiscover the key digital competencies that will be crucial for career success in the coming years.\n\n## 4. AI and Automation\n\nLearn how artificial intelligence and automation are changing job landscapes and how to adapt.\n\n## 5. Continuous Learning\n\nUnderstand the importance of lifelong learning and how to stay relevant in a rapidly evolving job market.",
+      `## 1. Skills Gained from Gaming
+
+Playing games helps build focus, quick problem-solving, and decision-making abilities. It can also improve your English skills by exposing you to new words and conversations.
+
+## 2. English Vocabulary Commonly Found in Games
+
+- **Level**
+- **Mission/Quest**
+- **Score**
+- **Team**
+- **Inventory**
+- **Upgrade**
+- **Challenge**
+- **Co-op**
+
+## 3. Tips for Healthy Gaming
+
+- Set a daily time limit for playing games.
+- Take regular breaks to rest your eyes and body.
+- Play with friends or family for added fun and social skills.
+- Use English vocabulary and phrases you learn from games in real life.
+
+## 4. Sample Conversation about Gaming
+
+**A:** What game are you playing now?  
+**B:** I'm playing an adventure game with my friends.  
+**A:** Is it fun?  
+**B:** Yes! I'm learning new English words from it, too.
+
+Enjoy playing games responsibly—they can be both fun and a great way to learn English! 🎮`,
   },
   {
     id: 5,
     image:
-      "https://res.cloudinary.com/dcbpjtd1r/image/upload/v1728449771/my-blog-post/g8qpepvgnz6gioylyhrz.jpg",
-    category: "Inspiration",
+      "https://i.ytimg.com/vi/X1tBEKFYKJg/maxresdefault.jpg",
+    category: "General",
     title: "The Power of Habits: Small Changes, Big Results",
     description:
       "Discover how small, consistent habits can lead to significant personal and professional growth over time.",
-    author: "Thompson P.",
-    date: "23 June 2024",
+    author: "Naiyana T.",
+    date: "18 October 2025",
     likes: 515,
     content:
       "## 1. Understanding Habit Formation\n\nLearn the science behind habit formation and why habits are so powerful in shaping our lives.\n\n## 2. Identifying Key Habits\n\nDiscover how to identify the habits that will have the most significant impact on your goals.\n\n## 3. Building Positive Habits\n\nExplore strategies for successfully implementing and maintaining positive habits.\n\n## 4. Breaking Bad Habits\n\nLearn effective techniques for identifying and breaking detrimental habits.\n\n## 5. Habit Stacking\n\nUnderstand how to use habit stacking to make new habits easier to adopt and maintain.",
-  },
-  {
-    id: 6,
-    image:
-      "https://res.cloudinary.com/dcbpjtd1r/image/upload/v1728449771/my-blog-post/koydfh6jpmzhtxvwein3.jpg",
-    category: "Cat",
-    title: "Cat Nutrition: A Guide to Feeding Your Feline Friend",
-    description:
-      "Learn about the nutritional needs of cats and how to provide a balanced diet for optimal health and longevity.",
-    author: "Thompson P.",
-    date: "21 July 2024",
-    likes: 555,
-    content:
-      "## 1. Understanding Feline Nutritional Needs\n\nExplore the unique dietary requirements of cats as obligate carnivores.\n\n## 2. Choosing the Right Cat Food\n\nLearn how to read cat food labels and select high-quality options for your pet.\n\n## 3. Wet vs. Dry Food\n\nUnderstand the pros and cons of wet and dry cat food and how to incorporate both into your cat's diet.\n\n## 4. Portion Control and Feeding Schedule\n\nDiscover how to determine the right portion sizes and establish a healthy feeding routine.\n\n## 5. Special Dietary Considerations\n\nLearn about nutrition for cats with specific health conditions or at different life stages.",
   },
 ];

@@ -1,233 +1,277 @@
-// API Configuration
-const API_BASE_URL = 'https://myblogpostserver.vercel.app';
+// Import Supabase services
+import { 
+  authService, 
+  postsService, 
+  categoriesService, 
+  commentsService,
+  initializeDatabase 
+} from '@/services/supabaseService';
 
-// API Endpoints
+// Legacy API endpoints (for backward compatibility)
 export const API_ENDPOINTS = {
   // Auth endpoints
-  REGISTER: `${API_BASE_URL}/auth/register`,
-  LOGIN: `${API_BASE_URL}/auth/login`,
-  GET_USER: `${API_BASE_URL}/auth/get-user`,
-  LOGOUT: `${API_BASE_URL}/auth/logout`,
-  RESET_PASSWORD: `${API_BASE_URL}/auth/reset-password`,
+  REGISTER: '/auth/register',
+  LOGIN: '/auth/login',
+  GET_USER: '/auth/get-user',
+  LOGOUT: '/auth/logout',
+  RESET_PASSWORD: '/auth/reset-password',
   
   // Posts endpoints
-  POSTS: `${API_BASE_URL}/posts`,
-  POST_BY_ID: (id) => `${API_BASE_URL}/posts/${id}`,
+  POSTS: '/posts',
+  POST_BY_ID: (id) => `/posts/${id}`,
   
   // Categories endpoints
-  CATEGORIES: `${API_BASE_URL}/categories`,
-  CATEGORY_BY_ID: (id) => `${API_BASE_URL}/categories/${id}`,
+  CATEGORIES: '/categories',
+  CATEGORY_BY_ID: (id) => `/categories/${id}`,
   
   // Profile endpoints
-  PROFILE: `${API_BASE_URL}/profile`,
-  UPLOAD_AVATAR: `${API_BASE_URL}/profile/avatar`,
+  PROFILE: '/profile',
+  PROFILE_AVATAR: '/profile/avatar',
 };
 
-// API Helper Functions
-export const apiRequest = async (url, options = {}) => {
-  const defaultOptions = {
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    },
-  };
-
-  // Add Authorization header if token exists
-  const token = localStorage.getItem('token');
-  if (token) {
-    defaultOptions.headers.Authorization = `Bearer ${token}`;
-  }
-
-  const config = {
-    ...defaultOptions,
-    ...options,
-    headers: {
-      ...defaultOptions.headers,
-      ...options.headers,
-    },
-  };
-
-  try {
-    console.log('Making API request to:', url);
-    console.log('Request config:', config);
-    console.log('Request body:', config.body);
-    
-    const response = await fetch(url, config);
-    console.log('Response status:', response.status);
-    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-    
-    const data = await response.json();
-    console.log('Response data:', data);
-
-    if (!response.ok) {
-      console.error('API Error Response:', data);
-      console.error('Full error details:', {
-        status: response.status,
-        statusText: response.statusText,
-        url: url,
-        body: config.body
-      });
-      throw new Error(data.error || `HTTP error! status: ${response.status}`);
-    }
-
-    console.log('API request successful');
-    return data;
-  } catch (error) {
-    console.error('API Request Error:', error);
-    throw error;
-  }
+// Default options for API requests
+const defaultOptions = {
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  },
 };
 
-// Auth API Functions
+// Generic API request function (Legacy - now uses Supabase)
+const apiRequest = async (url, options = {}) => {
+  console.warn('⚠️ Legacy API request detected. Consider using Supabase services directly.');
+  
+  // For backward compatibility, we'll try to map to Supabase services
+  if (url.includes('/auth/')) {
+    throw new Error('Please use authService from @/services/supabaseService instead of legacy API');
+  }
+  
+  if (url.includes('/posts')) {
+    throw new Error('Please use postsService from @/services/supabaseService instead of legacy API');
+  }
+  
+  if (url.includes('/categories')) {
+    throw new Error('Please use categoriesService from @/services/supabaseService instead of legacy API');
+  }
+  
+  throw new Error('Legacy API not supported. Please use Supabase services.');
+};
+
+// Auth API Functions (Now using Supabase)
 export const authAPI = {
   // Register user
   register: async (userData) => {
-    return apiRequest(API_ENDPOINTS.REGISTER, {
-      method: 'POST',
-      body: JSON.stringify(userData),
-    });
+    const { email, password, full_name } = userData;
+    const result = await authService.signUp(email, password, full_name);
+    
+    if (result.error) {
+      throw new Error(result.error.message || 'Registration failed');
+    }
+    
+    return {
+      user: result.data.user,
+      access_token: result.data.session?.access_token
+    };
   },
 
   // Login user
   login: async (email, password) => {
-    return apiRequest(API_ENDPOINTS.LOGIN, {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    });
+    const result = await authService.signIn(email, password);
+    
+    if (result.error) {
+      throw new Error(result.error.message || 'Login failed');
+    }
+    
+    return {
+      user: result.data.user,
+      access_token: result.data.session?.access_token
+    };
   },
 
   // Get user info
   getUser: async () => {
-    return apiRequest(API_ENDPOINTS.GET_USER, {
-      method: 'GET',
-    });
+    const result = await authService.getCurrentUser();
+    
+    if (result.error) {
+      throw new Error(result.error.message || 'Failed to get user');
+    }
+    
+    if (!result.data) {
+      throw new Error('No user found');
+    }
+    
+    // Get user profile
+    const profileResult = await authService.getUserProfile(result.data.id);
+    
+    return {
+      ...result.data,
+      ...profileResult.data
+    };
   },
 
   // Logout user
   logout: async () => {
-    return apiRequest(API_ENDPOINTS.LOGOUT, {
-      method: 'POST',
-    });
+    const result = await authService.signOut();
+    
+    if (result.error) {
+      throw new Error(result.error.message || 'Logout failed');
+    }
+    
+    return { success: true };
   },
 
   // Reset password
   resetPassword: async (email) => {
-    return apiRequest(API_ENDPOINTS.RESET_PASSWORD, {
-      method: 'POST',
-      body: JSON.stringify({ email }),
-    });
+    // Note: This would need to be implemented with Supabase Auth
+    throw new Error('Password reset not implemented yet');
   },
 };
 
-// Posts API Functions
+// Posts API Functions (Now using Supabase)
 export const postsAPI = {
   // Get all posts
-  getAll: async () => {
-    return apiRequest(API_ENDPOINTS.POSTS, {
-      method: 'GET',
-    });
+  getAll: async (params = {}) => {
+    const result = await postsService.getPosts(params);
+    
+    if (result.error) {
+      throw new Error(result.error.message || 'Failed to fetch posts');
+    }
+    
+    return result.data;
   },
 
   // Get post by ID
   getById: async (id) => {
-    return apiRequest(API_ENDPOINTS.POST_BY_ID(id), {
-      method: 'GET',
-    });
+    const result = await postsService.getPostById(id);
+    
+    if (result.error) {
+      throw new Error(result.error.message || 'Failed to fetch post');
+    }
+    
+    return result.data;
   },
 
   // Create post (Admin only)
   create: async (postData) => {
-    return apiRequest(API_ENDPOINTS.POSTS, {
-      method: 'POST',
-      body: JSON.stringify(postData),
-    });
+    const result = await postsService.createPost(postData);
+    
+    if (result.error) {
+      throw new Error(result.error.message || 'Failed to create post');
+    }
+    
+    return result.data;
   },
 
   // Update post (Admin only)
   update: async (id, postData) => {
-    return apiRequest(API_ENDPOINTS.POST_BY_ID(id), {
-      method: 'PUT',
-      body: JSON.stringify(postData),
-    });
+    const result = await postsService.updatePost(id, postData);
+    
+    if (result.error) {
+      throw new Error(result.error.message || 'Failed to update post');
+    }
+    
+    return result.data;
   },
 
   // Delete post (Admin only)
   delete: async (id) => {
-    return apiRequest(API_ENDPOINTS.POST_BY_ID(id), {
-      method: 'DELETE',
-    });
+    const result = await postsService.deletePost(id);
+    
+    if (result.error) {
+      throw new Error(result.error.message || 'Failed to delete post');
+    }
+    
+    return { success: true };
   },
 };
 
-// Categories API Functions
+// Categories API Functions (Now using Supabase)
 export const categoriesAPI = {
   // Get all categories
   getAll: async () => {
-    return apiRequest(API_ENDPOINTS.CATEGORIES, {
-      method: 'GET',
-    });
+    const result = await categoriesService.getCategories();
+    
+    if (result.error) {
+      throw new Error(result.error.message || 'Failed to fetch categories');
+    }
+    
+    return result.data;
   },
 
   // Get category by ID
   getById: async (id) => {
-    return apiRequest(API_ENDPOINTS.CATEGORY_BY_ID(id), {
-      method: 'GET',
-    });
+    const result = await categoriesService.getCategories();
+    
+    if (result.error) {
+      throw new Error(result.error.message || 'Failed to fetch category');
+    }
+    
+    return result.data.find(cat => cat.id === id);
   },
 
   // Create category (Admin only)
   create: async (categoryData) => {
-    return apiRequest(API_ENDPOINTS.CATEGORIES, {
-      method: 'POST',
-      body: JSON.stringify(categoryData),
-    });
+    const result = await categoriesService.createCategory(categoryData);
+    
+    if (result.error) {
+      throw new Error(result.error.message || 'Failed to create category');
+    }
+    
+    return result.data;
   },
 
   // Update category (Admin only)
   update: async (id, categoryData) => {
-    return apiRequest(API_ENDPOINTS.CATEGORY_BY_ID(id), {
-      method: 'PUT',
-      body: JSON.stringify(categoryData),
-    });
+    const result = await categoriesService.updateCategory(id, categoryData);
+    
+    if (result.error) {
+      throw new Error(result.error.message || 'Failed to update category');
+    }
+    
+    return result.data;
   },
 
   // Delete category (Admin only)
   delete: async (id) => {
-    return apiRequest(API_ENDPOINTS.CATEGORY_BY_ID(id), {
-      method: 'DELETE',
-    });
+    const result = await categoriesService.deleteCategory(id);
+    
+    if (result.error) {
+      throw new Error(result.error.message || 'Failed to delete category');
+    }
+    
+    return { success: true };
   },
 };
 
-// Profile API Functions
+// Profile API Functions (Now using Supabase)
 export const profileAPI = {
-  // Update profile (User only)
+  // Update profile
   update: async (profileData) => {
-    return apiRequest(API_ENDPOINTS.PROFILE, {
-      method: 'PUT',
-      body: JSON.stringify(profileData),
-    });
+    // Get current user
+    const { data: { user } } = await authService.getCurrentUser();
+    if (!user) throw new Error('No user found');
+    
+    const result = await authService.updateProfile(user.id, profileData);
+    
+    if (result.error) {
+      throw new Error(result.error.message || 'Failed to update profile');
+    }
+    
+    return result.data;
   },
 
-  // Upload avatar (User only)
-  uploadAvatar: async (formData) => {
-    const token = localStorage.getItem('token');
-    return fetch(API_ENDPOINTS.UPLOAD_AVATAR, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-      body: formData,
-    }).then(response => response.json());
+  // Upload avatar
+  uploadAvatar: async (avatarFile) => {
+    // This would need to be implemented with Supabase Storage
+    throw new Error('Avatar upload not implemented yet');
   },
 };
 
-export default {
-  API_BASE_URL,
-  API_ENDPOINTS,
-  apiRequest,
-  authAPI,
-  postsAPI,
-  categoriesAPI,
-  profileAPI,
-};
+// Export Supabase services for direct use
+export { 
+  authService, 
+  postsService, 
+  categoriesService, 
+  commentsService,
+  initializeDatabase 
+} from '@/services/supabaseService';

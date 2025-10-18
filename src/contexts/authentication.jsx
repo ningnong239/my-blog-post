@@ -2,7 +2,8 @@
 /* eslint-disable react/prop-types */
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { authAPI } from "../config/api";
+import { authService } from "../services/supabaseService";
+import { debugComponent, debugError } from "../utils/debug";
 
 const AuthContext = React.createContext();
 
@@ -18,41 +19,44 @@ function AuthProvider(props) {
 
   // Fetch user details
   const fetchUser = async () => {
-    console.log("=== FETCH USER START ===");
-    const token = localStorage.getItem("token");
-    console.log("Token from localStorage:", token);
+    debugComponent("AuthProvider", "Fetching user from Supabase");
     
-    if (!token) {
-      console.log("No token found, setting user to null");
-      setState((prevState) => ({
-        ...prevState,
-        user: null,
-        getUserLoading: false,
-      }));
-      return;
-    }
-
     try {
       setState((prevState) => ({ ...prevState, getUserLoading: true }));
       
-      console.log("Attempting API getUser from Supabase...");
-      const userData = await authAPI.getUser();
+      const result = await authService.getCurrentUser();
       
-      console.log("API getUser response:", userData);
+      if (result.error) {
+        throw result.error;
+      }
+      
+      if (!result.data) {
+        debugComponent("AuthProvider", "No user found");
+        setState((prevState) => ({
+          ...prevState,
+          user: null,
+          getUserLoading: false,
+        }));
+        return;
+      }
+      
+      // Get user profile
+      const profileResult = await authService.getUserProfile(result.data.id);
+      
+      const userData = {
+        ...result.data,
+        ...profileResult.data
+      };
+      
+      debugComponent("AuthProvider", "User fetched successfully");
       setState((prevState) => ({
         ...prevState,
         user: userData,
         getUserLoading: false,
       }));
-      console.log("=== FETCH USER SUCCESS ===");
-      return;
       
     } catch (error) {
-      console.log("=== FETCH USER ERROR ===");
-      console.log("Fetch user error:", error);
-      console.log("Error message:", error.message);
-      console.log("Error details:", error);
-      
+      debugError(error, "fetchUser");
       setState((prevState) => ({
         ...prevState,
         error: error.message,
@@ -68,41 +72,39 @@ function AuthProvider(props) {
 
   // Login user
   const login = async (data) => {
-    console.log("=== LOGIN START ===");
-    console.log("Login attempt with:", data);
-    console.log("Email:", data.email);
-    console.log("Password:", data.password);
+    debugComponent("AuthProvider", "Starting login process");
     
     try {
       setState((prevState) => ({ ...prevState, loading: true, error: null }));
       
-      console.log("Attempting API login to Supabase...");
-      console.log("Login data:", data);
+      const result = await authService.signIn(data.email, data.password);
       
-      const loginData = await authAPI.login(data.email, data.password);
+      if (result.error) {
+        throw result.error;
+      }
       
-      console.log("API login response:", loginData);
-      const token = loginData.access_token;
-      localStorage.setItem("token", token);
-      console.log("Token saved to localStorage:", token);
+      debugComponent("AuthProvider", "Login successful, fetching user data");
       
-      setState((prevState) => ({ ...prevState, loading: false, error: null }));
-      console.log("Navigating to home page...");
+      // Set user data directly from Supabase session
+      const userData = {
+        ...result.data.user,
+        access_token: result.data.session?.access_token
+      };
+      
+      setState((prevState) => ({
+        ...prevState,
+        user: userData,
+        loading: false,
+        error: null,
+      }));
+      
+      debugComponent("AuthProvider", "Navigating to home page");
       navigate("/");
       
-      console.log("Fetching user data...");
-      await fetchUser();
-      
-      console.log("=== LOGIN SUCCESS ===");
       return; // Success
       
     } catch (error) {
-      console.log("=== LOGIN ERROR ===");
-      console.log("Login error:", error);
-      console.log("Error message:", error.message);
-      console.log("Error details:", error);
-      console.log("Error stack:", error.stack);
-      
+      debugError(error, "login");
       setState((prevState) => ({
         ...prevState,
         loading: false,
@@ -114,34 +116,27 @@ function AuthProvider(props) {
 
   // Register user
   const register = async (data) => {
-    console.log("Register attempt with:", data);
+    debugComponent("AuthProvider", "Starting registration process");
+    
     try {
       setState((prevState) => ({ ...prevState, loading: true, error: null }));
       
-      // Try API first - this will save to Supabase
-      try {
-        console.log("Attempting API register to Supabase...");
-        console.log("Register data:", data);
-        const registerData = await authAPI.register(data);
-        
-        console.log("API register response:", registerData);
-        console.log("User created with ID:", registerData.user?.id);
-        setState((prevState) => ({ ...prevState, loading: false, error: null }));
-        navigate("/sign-up/success");
-        return; // Success
-      } catch (apiError) {
-        console.log("API register failed:", apiError.message);
-        console.log("API error details:", apiError);
-        
-        // If API fails, return the error instead of using fallback
-        setState((prevState) => ({
-          ...prevState,
-          loading: false,
-          error: apiError.message,
-        }));
-        return { error: apiError.message };
+      const result = await authService.signUp(data.email, data.password, data.name);
+      
+      if (result.error) {
+        throw result.error;
       }
+      
+      debugComponent("AuthProvider", "Registration successful");
+      console.log("✅ Registration completed:", result.data);
+      
+      setState((prevState) => ({ ...prevState, loading: false, error: null }));
+      navigate("/sign-up/success");
+      return; // Success
+      
     } catch (error) {
+      debugError(error, "register");
+      console.error("❌ Registration failed:", error);
       setState((prevState) => ({
         ...prevState,
         loading: false,
@@ -152,9 +147,15 @@ function AuthProvider(props) {
   };
 
   // Logout user
-  const logout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("userRole");
+  const logout = async () => {
+    debugComponent("AuthProvider", "Starting logout process");
+    
+    try {
+      await authService.signOut();
+    } catch (error) {
+      debugError(error, "logout");
+    }
+    
     setState({ user: null, error: null, loading: false });
     navigate("/");
   };

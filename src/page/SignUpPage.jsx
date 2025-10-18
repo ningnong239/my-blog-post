@@ -64,62 +64,32 @@ export default function SignUpPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("=== SIGNUP PAGE SUBMIT START ===");
-    console.log("Form values:", formValues);
-    
     const errors = validateInputs();
-    console.log("Validation errors:", errors);
     setFormErrors(errors);
 
     if (Object.keys(errors).length === 0) {
-      console.log("No validation errors, attempting register...");
-      console.log("Register attempt with:", formValues);
-      
-      try {
-        const result = await register(formValues);
-        console.log("Register result:", result);
-        
-        if (result?.error) {
-          console.log("Register error:", result.error);
-          let suggestionMessage = "";
+      const result = await register(formValues);
+      if (result?.error) {
+        let suggestionMessage = "";
 
-          // Check for email or username-related issues
-          if (result.error.toLowerCase().includes("email")) {
-            suggestionMessage = "Try using a different email address.";
-          } else if (result.error.toLowerCase().includes("username")) {
-            suggestionMessage = "Try using a different username.";
-          }
-
-          return toast.custom((t) => (
-            <div className="bg-red-500 text-white p-4 rounded-sm flex justify-between items-start">
-              <div>
-                <h2 className="font-bold text-lg mb-1">{result.error}</h2>
-                <p className="text-sm">
-                  {suggestionMessage && (
-                    <span className="block mt-2 text-sm">
-                      {suggestionMessage}
-                    </span>
-                  )}
-                </p>
-              </div>
-              <button
-                onClick={() => toast.dismiss(t)}
-                className="text-white hover:text-gray-200"
-              >
-                <X size={20} />
-              </button>
-            </div>
-          ));
+        // Check for email or username-related issues
+        if (result.error.toLowerCase().includes("email")) {
+          suggestionMessage = "Try using a different email address.";
+        } else if (result.error.toLowerCase().includes("username")) {
+          suggestionMessage = "Try using a different username.";
         }
-        console.log("=== SIGNUP PAGE SUCCESS ===");
-      } catch (error) {
-        console.log("=== SIGNUP PAGE ERROR ===");
-        console.log("Register error:", error);
-        toast.custom((t) => (
+
+        return toast.custom((t) => (
           <div className="bg-red-500 text-white p-4 rounded-sm flex justify-between items-start">
             <div>
-              <h2 className="font-bold text-lg mb-1">Registration failed</h2>
-              <p className="text-sm">{error.message || "Please try again"}</p>
+              <h2 className="font-bold text-lg mb-1">{result.error}</h2>
+              <p className="text-sm">
+                {suggestionMessage && (
+                  <span className="block mt-2 text-sm">
+                    {suggestionMessage}
+                  </span>
+                )}
+              </p>
             </div>
             <button
               onClick={() => toast.dismiss(t)}
@@ -130,8 +100,6 @@ export default function SignUpPage() {
           </div>
         ));
       }
-    } else {
-      console.log("Validation errors found, not attempting register");
     }
   };
 

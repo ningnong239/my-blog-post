@@ -1,7 +1,7 @@
 /* eslint-disable react/prop-types */
 import { useEffect, useState } from "react";
-import { postsAPI, categoriesAPI } from "../config/api";
-import { Search, Loader2 } from "lucide-react";
+import axios from "axios";
+import { Search, Loader2, AlertCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -13,6 +13,9 @@ import {
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "./ui/skeleton";
 import { BlogCard } from "./BlogCard";
+import { blogPosts } from "@/data/blogPosts";
+import { debugAPI, debugComponent, debugError } from "@/utils/debug";
+import { postsService, categoriesService, initializeDatabase } from "@/services/supabaseService";
 
 export default function Articles() {
   // const categories = ["Highlight", "Cat", "Inspiration", "General"];
@@ -26,80 +29,189 @@ export default function Articles() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [categories, setCategories] = useState([]);
   const [isFirstTimeRender, setIsFirstTimeRender] = useState(true);
+  const [apiError, setApiError] = useState(false);
+  const [useFallbackData, setUseFallbackData] = useState(true); // Start with fallback data
 
   const navigate = useNavigate();
 
-  useEffect(() => {
-    // Fetch categories only on the first render
-    if (isFirstTimeRender) {
-      const fetchCategories = async () => {
-        try {
-          const responseCategories = await categoriesAPI.getAll();
-          setCategories(responseCategories);
-          setIsFirstTimeRender(false); // Mark the first render logic as done
-        } catch (error) {
-          console.log("Categories API error:", error);
-          // Use fallback categories if API fails
-          const fallbackCategories = [
-            { id: 1, name: "General" },
-            { id: 2, name: "Technology" },
-            { id: 3, name: "Lifestyle" }
-          ];
-          setCategories(fallbackCategories);
-          setIsFirstTimeRender(false);
-        }
-      };
+  // Fallback categories from blogPosts data
+  const getFallbackCategories = () => {
+    const uniqueCategories = [...new Set(blogPosts.map(post => post.category))];
+    return uniqueCategories.map((cat, index) => ({ id: index + 1, name: cat }));
+  };
 
-      fetchCategories();
-    }
-  }, [isFirstTimeRender]);
-
+  // Try to fetch real data from Supabase after initial fallback load
   useEffect(() => {
-    // Fetch posts when page or category changes
-    const fetchPosts = async () => {
-      setIsLoading(true); // Start loading
+    const fetchRealData = async () => {
       try {
-        const response = await postsAPI.getAll();
-        if (page === 1) {
-          setPosts(response.posts || response); // Replace posts on the first page load
-        } else {
-          setPosts((prevPosts) => [...prevPosts, ...(response.posts || response)]); // Append on subsequent pages
-        }
-        setIsLoading(false); // Stop loading
-        if (response.currentPage >= response.totalPages) {
-          setHasMore(false); // No more posts to load
+        console.log("🔄 Trying to fetch real data from Supabase");
+        const [categoriesResult, postsResult] = await Promise.all([
+          categoriesService.getCategories(),
+          postsService.getPosts({ page: 1, limit: 6, category: category !== "Highlight" ? category : null })
+        ]);
+        
+        if (!categoriesResult.error && !postsResult.error) {
+          // Only switch to real data if there are actual posts
+          if (postsResult.data.posts && postsResult.data.posts.length > 0) {
+            console.log("✅ Real data fetched successfully, switching from fallback");
+            setCategories(categoriesResult.data);
+            setPosts(postsResult.data.posts);
+            setHasMore(postsResult.data.hasMore);
+            setApiError(false);
+            setUseFallbackData(false);
+          } else {
+            console.log("⚠️ Real data fetched but no posts found, keeping fallback");
+            // Keep using fallback data
+          }
         }
       } catch (error) {
-        console.log("Posts API error:", error);
-        // Use fallback posts if API fails
-        const fallbackPosts = [
-          {
-            id: 1,
-            title: "Welcome to the Blog",
-            description: "This is a sample post while the database is being fixed.",
-            author: "Admin",
-            date: new Date().toISOString(),
-            category: "General",
-            image: null
-          }
-        ];
-        setPosts(fallbackPosts);
-        setIsLoading(false); // Handle error and stop loading
+        console.log("❌ Failed to fetch real data, keeping fallback:", error);
+        // Keep fallback data
       }
     };
 
-    fetchPosts(); // Call fetchPosts when category or page changes
-  }, [page, category]); // Effect depends on page and category
+    // Try to fetch real data after a short delay
+    const timer = setTimeout(fetchRealData, 1000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Load fallback data immediately on mount
+  useEffect(() => {
+    console.log("🚀 Initial load - using fallback data");
+    const fallbackData = getFallbackPosts(1, 6, category);
+    setPosts(fallbackData.posts);
+    setHasMore(fallbackData.hasMore);
+    setCategories(getFallbackCategories());
+    setApiError(true); // Show that we're using fallback
+  }, []); // Run only once on mount
+
+  // Fallback posts from blogPosts data
+  const getFallbackPosts = (currentPage = 1, limit = 6, selectedCategory = "Highlight") => {
+    let filteredPosts = blogPosts;
+    
+    // Filter by category if not "Highlight"
+    if (selectedCategory !== "Highlight") {
+      filteredPosts = blogPosts.filter(post => post.category === selectedCategory);
+    }
+    
+    // Pagination
+    const startIndex = (currentPage - 1) * limit;
+    const endIndex = startIndex + limit;
+    const paginatedPosts = filteredPosts.slice(startIndex, endIndex);
+    
+    return {
+      posts: paginatedPosts,
+      currentPage,
+      totalPages: Math.ceil(filteredPosts.length / limit),
+      hasMore: endIndex < filteredPosts.length
+    };
+  };
+
+  // Handle page and category changes
+  useEffect(() => {
+    if (useFallbackData) {
+      console.log("🔄 Category/page changed, using fallback data");
+      const fallbackData = getFallbackPosts(page, 6, category);
+      if (page === 1) {
+        setPosts(fallbackData.posts);
+      } else {
+        setPosts((prevPosts) => [...prevPosts, ...fallbackData.posts]);
+      }
+      setHasMore(fallbackData.hasMore);
+    } else {
+      // Try to fetch from Supabase
+      const fetchPosts = async () => {
+        setIsLoading(true);
+        try {
+          const result = await postsService.getPosts({
+            page,
+            limit: 6,
+            category: category !== "Highlight" ? category : null
+          });
+          
+          if (result.error) throw result.error;
+          
+          // Check if we have posts, if not switch to fallback
+          if (!result.data.posts || result.data.posts.length === 0) {
+            console.log("❌ No posts found in Supabase, switching to fallback");
+            setUseFallbackData(true);
+            const fallbackData = getFallbackPosts(page, 6, category);
+            if (page === 1) {
+              setPosts(fallbackData.posts);
+            } else {
+              setPosts((prevPosts) => [...prevPosts, ...fallbackData.posts]);
+            }
+            setHasMore(fallbackData.hasMore);
+            setApiError(true);
+          } else {
+            if (page === 1) {
+              setPosts(result.data.posts);
+            } else {
+              setPosts((prevPosts) => [...prevPosts, ...result.data.posts]);
+            }
+            setHasMore(result.data.hasMore);
+            setApiError(false);
+          }
+        } catch (error) {
+          console.log("❌ Failed to fetch posts, switching to fallback");
+          setUseFallbackData(true);
+          const fallbackData = getFallbackPosts(page, 6, category);
+          if (page === 1) {
+            setPosts(fallbackData.posts);
+          } else {
+            setPosts((prevPosts) => [...prevPosts, ...fallbackData.posts]);
+          }
+          setHasMore(fallbackData.hasMore);
+          setApiError(true);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      
+      fetchPosts();
+    }
+  }, [page, category, useFallbackData]);
 
   useEffect(() => {
     if (searchKeyword.length > 0) {
       setIsLoading(true);
+      
+      // If using fallback data, search locally
+      if (useFallbackData) {
+        debugComponent("ArticlesSection", "Searching in fallback data");
+        const filteredPosts = blogPosts.filter(post => 
+          post.title.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+          post.description.toLowerCase().includes(searchKeyword.toLowerCase())
+        );
+        setSuggestions(filteredPosts);
+        setIsLoading(false);
+        return;
+      }
+      
       const fetchSuggestions = async () => {
         try {
-          const response = await postsAPI.getAll();
-          setSuggestions(response.posts || response); // Set search suggestions
+          debugComponent("ArticlesSection", "Searching posts in Supabase");
+          const result = await postsService.getPosts({
+            keyword: searchKeyword,
+            limit: 10
+          });
+          
+          if (result.error) {
+            throw result.error;
+          }
+          
+          setSuggestions(result.data.posts); // Set search suggestions
           setIsLoading(false);
-        } catch {
+        } catch (error) {
+          debugError(error, "fetchSuggestions");
+          debugComponent("ArticlesSection", "Using fallback search");
+          
+          // Fallback to local search
+          const filteredPosts = blogPosts.filter(post => 
+            post.title.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+            post.description.toLowerCase().includes(searchKeyword.toLowerCase())
+          );
+          setSuggestions(filteredPosts);
           setIsLoading(false);
         }
       };
@@ -108,15 +220,49 @@ export default function Articles() {
     } else {
       setSuggestions([]); // Clear suggestions if keyword is empty
     }
-  }, [searchKeyword]);
+  }, [searchKeyword, useFallbackData]);
 
   const handleLoadMore = () => {
     setPage((prevPage) => prevPage + 1); // Increment page number to load more posts
   };
 
+  // Retry API connection
+  const retryConnection = () => {
+    debugComponent("ArticlesSection", "Retrying API connection");
+    setUseFallbackData(false);
+    setApiError(false);
+    setIsFirstTimeRender(true);
+    setPage(1);
+    setPosts([]);
+    setHasMore(true);
+  };
+
   return (
     <div className="w-full max-w-7xl mx-auto md:px-6 lg:px-8 mb-20">
       <h2 className="text-xl font-bold mb-4 px-4">Latest articles</h2>
+      
+      {/* API Error Notification */}
+      {apiError && (
+        <div className="mx-4 mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-between">
+          <div className="flex items-center">
+            <AlertCircle className="h-5 w-5 text-yellow-600 mr-3" />
+            <div>
+              <p className="text-sm font-medium text-yellow-800">
+                API Server Unavailable
+              </p>
+              <p className="text-xs text-yellow-700">
+                Using offline data. Some features may be limited.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={retryConnection}
+            className="px-3 py-1 text-xs font-medium text-yellow-800 bg-yellow-100 hover:bg-yellow-200 rounded-md transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      )}
       <div className="bg-red-500 px-4 py-4 md:py-3 md:rounded-sm flex flex-col space-y-4 md:gap-16 md:flex-row-reverse md:items-center md:space-y-0 md:justify-between mb-10">
         <div className="w-full md:max-w-sm">
           <div className="relative">
@@ -221,24 +367,40 @@ export default function Articles() {
         )}
       </div>
       <article className="grid grid-cols-1 md:grid-cols-2 gap-8 px-4 md:px-0">
-        {posts.map((blog, index) => {
-          return (
-            <BlogCard
-              key={index}
-              id={blog.id}
-              image={blog.image}
-              category={blog.category}
-              title={blog.title}
-              description={blog.description}
-              author={blog.author}
-              date={new Date(blog.date).toLocaleDateString("en-GB", {
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              })}
-            />
-          );
-        })}
+        {console.log("🎯 Rendering posts:", { postsLength: posts.length, posts, isLoading, apiError, useFallbackData })}
+        {posts.length === 0 && !isLoading ? (
+          <div className="col-span-2 text-center py-8 text-gray-500">
+            <p>ไม่พบข้อมูลบทความ</p>
+            <p className="text-sm mt-2">API Error: {apiError ? 'Yes' : 'No'}, Using Fallback: {useFallbackData ? 'Yes' : 'No'}</p>
+          </div>
+        ) : (
+          posts.map((blog, index) => {
+            console.log(`📊 Blog ${index}:`, blog);
+            
+            // Find corresponding fallback data from blogPosts
+            const fallbackPost = blogPosts.find(post => post.id === blog.id);
+            
+            return (
+              <BlogCard
+                key={index}
+                id={blog.id}
+                image={blog.image}
+                category={blog.categories?.name || 'General'}
+                title={blog.title}
+                description={blog.description}
+                author={blog.author || 'Unknown Author'}
+                date={new Date(blog.date).toLocaleDateString("en-GB", {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })}
+                debugInfo={blog}
+                fallbackData={fallbackPost}
+                apiError={apiError}
+              />
+            );
+          })
+        )}
       </article>
       {hasMore && (
         <div className="text-center mt-20">

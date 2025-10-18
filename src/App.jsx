@@ -1,28 +1,32 @@
 import { Route, Routes } from "react-router-dom";
+import { useAuth } from "@/contexts/authentication";
+import jwtInterceptor from "./utils/jwtIntercepter.js";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
+import AuthenticationRoute from "./components/auth/AuthenticationRoute";
+import { Toaster } from "@/components/ui/sonner";
+
+// Main Pages
 import HomePage from "./page/HomePage";
 import ViewPostPage from "./page/ViewPostPage";
-import { Toaster } from "@/components/ui/sonner";
 import NotFoundPage from "./page/NotFoundPage";
 import SignUpPage from "./page/SignUpPage";
 import LoginPage from "./page/LoginPage";
 import SignUpSuccessPage from "./page/SignUpSuccessPage";
 import ProfilePage from "./page/ProfilePage";
 import ResetPasswordPage from "./page/ResetPasswordPage";
-import AdminArticleManagementPage from "./page/admin/AdminArticlePage";
-import AdminCategoryManagementPage from "./page/admin/AdminCategoryPage";
-import AdminProfilePage from "./page/admin/AdminProfilePage";
-import AdminResetPasswordPage from "./page/admin/AdminResetPasswordPage";
-import AdminCreateArticlePage from "./page/admin/AdminCreateArticle";
-import AdminCreateCategoryPage from "./page/admin/AdminCreateCategoryPage";
-import AdminEditCategoryPage from "./page/admin/AdminEditCategoryPage";
-import AdminEditArticlePage from "./page/admin/AdminEditArticlePage";
-import AdminLoginPage from "./page/admin/AdminLoginPage";
 
-// import AdminNotificationPage from "./page/admin/AdminNotificationPage";
-import { useAuth, AuthProvider } from "@/contexts/authentication"; // Import useAuth to check auth state
-import jwtInterceptor from "./utils/jwtIntercepter.js";
-import ProtectedRoute from "./components/auth/ProtectedRoute";
-import AuthenticationRoute from "./components/auth/AuthenticationRoute";
+// Admin Pages
+import AdminProfilePage from "./page/admin/AdminProfilePage";
+import AdminArticlePage from "./page/admin/AdminArticlePage";
+import AdminCategoryPage from "./page/admin/AdminCategoryPage";
+import AdminCreateArticle from "./page/admin/AdminCreateArticle";
+import AdminCreateCategoryPage from "./page/admin/AdminCreateCategoryPage";
+import AdminEditArticlePage from "./page/admin/AdminEditArticlePage";
+import AdminEditCategoryPage from "./page/admin/AdminEditCategoryPage";
+import AdminLoginPage from "./page/admin/AdminLoginPage";
+import AdminNotificationPage from "./page/admin/AdminNotificationPage";
+import AdminResetPasswordPage from "./page/admin/AdminResetPasswordPage";
+import "./utils/debugSignup"; // Import signup debug utilities
 
 jwtInterceptor();
 
@@ -30,11 +34,23 @@ function App() {
   const { isAuthenticated, state } = useAuth();
 
   return (
-    <AuthProvider>
-      <div className="App">
-        <Routes>
+    <div className="App">
+
+
+
+      <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/post/:postId" element={<ViewPostPage />} />
+        <Route path="/admin" element={<AdminProfilePage />} />
+        <Route path="/admin/articles" element={<AdminArticlePage />} />
+        <Route path="/admin/categories" element={<AdminCategoryPage />} />
+        <Route path="/admin/create-article" element={<AdminCreateArticle />} />
+        <Route path="/admin/create-category" element={<AdminCreateCategoryPage />} />
+        <Route path="/admin/edit-article/:id" element={<AdminEditArticlePage />} />
+        <Route path="/admin/edit-category/:id" element={<AdminEditCategoryPage />} />
+        <Route path="/admin/login" element={<AdminLoginPage />} />
+        <Route path="/admin/notifications" element={<AdminNotificationPage />} />
+        <Route path="/admin/reset-password" element={<AdminResetPasswordPage />} />
         <Route path="*" element={<NotFoundPage />} />
 
         {/* Authentication Section */}
@@ -111,7 +127,7 @@ function App() {
               userRole={state.user?.role}
               requiredRole="admin"
             >
-              <AdminArticleManagementPage />
+              <AdminArticlePage />
             </ProtectedRoute>
           }
         />
@@ -124,7 +140,7 @@ function App() {
               userRole={state.user?.role}
               requiredRole="admin"
             >
-              <AdminCreateArticlePage />
+              <AdminCreateArticle />
             </ProtectedRoute>
           }
         />
@@ -150,7 +166,7 @@ function App() {
               userRole={state.user?.role}
               requiredRole="admin"
             >
-              <AdminCategoryManagementPage />
+              <AdminCategoryPage />
             </ProtectedRoute>
           }
         />
@@ -222,13 +238,12 @@ function App() {
         />
       </Routes>
 
-        <Toaster
-          toastOptions={{
-            unstyled: true,
-          }}
-        />
-      </div>
-    </AuthProvider>
+      <Toaster
+        toastOptions={{
+          unstyled: true,
+        }}
+      />
+    </div>
   );
 }
 
