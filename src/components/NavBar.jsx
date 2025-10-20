@@ -129,9 +129,9 @@ export function NavBar() {
                 <span>Reset password</span>
               </DropdownMenuItem>
               {/* Admin panel เฉพาะ role admin */}
-              {state.user.role === "admin" && (
+              {state.user?.role === "admin" && (
                 <DropdownMenuItem
-                  onClick={() => navigate("/admin/article-management")}
+                  onClick={() => navigate("/admin")}
                   className="text-sm text-[#1E293B] hover:bg-[#F1F5F9] hover:text-[#F59E42] hover:rounded-sm cursor-pointer font-medium"
                 >
                   <SquareArrowOutUpRight className="mr-2 h-4 w-4" />
@@ -230,9 +230,9 @@ export function NavBar() {
                   </div>
                 </a>
                 {/* Admin panel (เฉพาะแอดมิน) */}
-                {state.user.role === "admin" && (
+                {state.user?.role === "admin" && (
                   <a
-                    onClick={() => navigate("/admin/article-management")}
+                    onClick={() => navigate("/admin")}
                     className="flex items-center justify-between px-4 py-2 text-base font-medium text-[#1E293B] hover:bg-[#F1F5F9] hover:text-[#F59E42] rounded-sm cursor-pointer transition-colors"
                   >
                     <div className="flex items-center">

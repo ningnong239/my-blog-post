@@ -19,10 +19,12 @@ import {
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import authorImage from "../assets/ning.jpg";
-import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/authentication";
+import { postsService, commentsService } from "@/services/supabaseService";
+import { debugComponent, debugError } from "@/utils/debug";
+import { blogPosts } from "@/data/blogPosts";
 
 export default function ViewPost() {
   const [img, setImg] = useState("");
@@ -35,6 +37,7 @@ export default function ViewPost() {
   const [comments, setComments] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [useFallbackData, setUseFallbackData] = useState(false);
 
   const param = useParams();
   const navigate = useNavigate();
@@ -48,29 +51,70 @@ export default function ViewPost() {
 
   const getPost = async () => {
     setIsLoading(true);
+    debugComponent("ViewPost", `Fetching post with ID: ${param.postId}`);
+    
     try {
-      const postsResponse = await axios.get(
-        `http://localhost:4001/posts/${param.postId}`
-      );
-      setImg(postsResponse.data.image);
-      setTitle(postsResponse.data.title);
-      setDate(postsResponse.data.date);
-      setDescription(postsResponse.data.description);
-      setCategory(postsResponse.data.category);
-      setContent(postsResponse.data.content);
-      const likesResponse = await axios.get(
-        `http://localhost:4001/posts/${param.postId}/likes`
-      );
-      setLikes(likesResponse.data.like_count);
-      const commentsResponse = await axios.get(
-        `http://localhost:4001/posts/${param.postId}/comments`
-      );
-      setComments(commentsResponse.data);
+      // Get post data from Supabase
+      const postResult = await postsService.getPostById(param.postId);
+      
+      if (postResult.error) {
+        throw postResult.error;
+      }
+      
+      const post = postResult.data;
+      
+      // Check if post exists and has content
+      if (!post || !post.title || !post.content) {
+        console.log("⚠️ Post data incomplete from Supabase, trying fallback data");
+        throw new Error("Incomplete post data");
+      }
+      
+      debugComponent("ViewPost", "Post data fetched successfully from Supabase");
+      
+      setImg(post.image);
+      setTitle(post.title);
+      setDate(post.date);
+      setDescription(post.description);
+      setCategory(post.categories?.name || 'General');
+      setContent(post.content);
+      setLikes(post.likes_count || 0);
+      setUseFallbackData(false);
+      
+      // Get comments from Supabase
+      const commentsResult = await commentsService.getComments(param.postId);
+      
+      if (commentsResult.error) {
+        console.warn("Failed to fetch comments:", commentsResult.error);
+        setComments([]);
+      } else {
+        setComments(commentsResult.data || []);
+      }
+      
       setIsLoading(false);
     } catch (error) {
-      console.log(error);
-      setIsLoading(false);
-      navigate("*");
+      debugError(error, "getPost");
+      console.log("❌ Failed to fetch post from Supabase, using fallback data");
+      
+      // Try to find post in fallback data
+      const fallbackPost = blogPosts.find(post => post.id === parseInt(param.postId));
+      
+      if (fallbackPost) {
+        console.log("✅ Found post in fallback data");
+        setImg(fallbackPost.image);
+        setTitle(fallbackPost.title);
+        setDate(fallbackPost.date);
+        setDescription(fallbackPost.description);
+        setCategory(fallbackPost.category);
+        setContent(fallbackPost.content);
+        setLikes(fallbackPost.likes || 0);
+        setComments([]); // No comments for fallback data
+        setUseFallbackData(true);
+        setIsLoading(false);
+      } else {
+        console.error("❌ Post not found in fallback data either");
+        setIsLoading(false);
+        navigate("*");
+      }
     }
   };
 
@@ -79,6 +123,18 @@ export default function ViewPost() {
   }
   return (
     <div className="max-w-7xl mx-auto space-y-8 container md:px-8 pb-20 md:pb-28 md:pt-8 lg:pt-16">
+      {/* Fallback data notification */}
+      {useFallbackData && (
+        <div className="mx-4 mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <div className="flex items-center">
+            <div className="text-sm text-yellow-800">
+              <p className="font-medium">Using offline data</p>
+              <p className="text-xs">This post is loaded from local storage. Some features may be limited.</p>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div className="space-y-4 md:px-4">
         <img
           src={img}
@@ -118,12 +174,14 @@ export default function ViewPost() {
             user={user}
             setLikes={setLikes}
           />
-          <Comment
-            setDialogState={setIsDialogOpen}
-            commentList={comments}
-            user={user}
-            setComments={setComments}
-          />
+          {!useFallbackData && (
+            <Comment
+              setDialogState={setIsDialogOpen}
+              commentList={comments}
+              user={user}
+              setComments={setComments}
+            />
+          )}
         </div>
 
         <div className="hidden xl:block xl:w-1/4">
@@ -152,31 +210,28 @@ function Share({ likesAmount, setDialogState, user, setLikes }) {
 
     setIsLiking(true);
     try {
-      // First try to like the post
-      try {
-        await axios.post(
-          `http://localhost:4001/posts/${param.postId}/likes`
-        );
-      } catch (error) {
-        // If we get a 500 error, assume the post is already liked and try to unlike
-        if (error.response?.status === 500) {
-          await axios.delete(
-            `http://localhost:4001/posts/${param.postId}/likes`
-          );
-        } else {
-          // If it's a different error, throw it to be caught by the outer try-catch
-          throw error;
-        }
-      }
-
-      // After either liking or unliking, get the updated like count
-      const likesResponse = await axios.get(
-        `http://localhost:4001/posts/${param.postId}/likes`
-      );
-      setLikes(likesResponse.data.like_count);
+      // For now, just increment the like count locally
+      // TODO: Implement proper like/unlike functionality with Supabase
+      setLikes(prev => prev + 1);
+      
+      toast.custom((t) => (
+        <div className="bg-green-500 text-white p-4 rounded-sm flex justify-between items-start max-w-md w-full">
+          <div>
+            <h2 className="font-bold text-lg mb-1">Liked!</h2>
+            <p className="text-sm">
+              You liked this post.
+            </p>
+          </div>
+          <button
+            onClick={() => toast.dismiss(t)}
+            className="text-white hover:text-gray-200"
+          >
+            <X size={20} />
+          </button>
+        </div>
+      ));
     } catch (error) {
-      console.error("Error handling like/unlike:", error);
-      // You might want to show an error message to the user here
+      console.error("Error handling like:", error);
     } finally {
       setIsLiking(false);
     }
@@ -264,31 +319,61 @@ function Comment({ setDialogState, commentList, setComments, user }) {
     } else {
       // Submit the comment
       setIsError(false);
+      const commentToSubmit = commentText;
       setCommentText("");
-      await axios.post(
-        `http://localhost:4001/posts/${param.postId}/comments`,
-        { comment: commentText }
-      );
-      const commentsResponse = await axios.get(
-        `http://localhost:4001/posts/${param.postId}/comments`
-      );
-      setComments(commentsResponse.data);
-      toast.custom((t) => (
-        <div className="bg-green-500 text-white p-4 rounded-sm flex justify-between items-start max-w-md w-full">
-          <div>
-            <h2 className="font-bold text-lg mb-1">Comment Posted!</h2>
-            <p className="text-sm">
-              Your comment has been successfully added to this post.
-            </p>
+      
+      try {
+        const result = await commentsService.createComment({
+          post_id: param.postId,
+          user_id: user.id,
+          comment_text: commentToSubmit
+        });
+        
+        if (result.error) {
+          throw result.error;
+        }
+        
+        // Refresh comments
+        const commentsResult = await commentsService.getComments(param.postId);
+        if (!commentsResult.error) {
+          setComments(commentsResult.data || []);
+        }
+        
+        toast.custom((t) => (
+          <div className="bg-green-500 text-white p-4 rounded-sm flex justify-between items-start max-w-md w-full">
+            <div>
+              <h2 className="font-bold text-lg mb-1">Comment Posted!</h2>
+              <p className="text-sm">
+                Your comment has been successfully added to this post.
+              </p>
+            </div>
+            <button
+              onClick={() => toast.dismiss(t)}
+              className="text-white hover:text-gray-200"
+            >
+              <X size={20} />
+            </button>
           </div>
-          <button
-            onClick={() => toast.dismiss(t)}
-            className="text-white hover:text-gray-200"
-          >
-            <X size={20} />
-          </button>
-        </div>
-      ));
+        ));
+      } catch (error) {
+        console.error("Failed to post comment:", error);
+        toast.custom((t) => (
+          <div className="bg-red-500 text-white p-4 rounded-sm flex justify-between items-start max-w-md w-full">
+            <div>
+              <h2 className="font-bold text-lg mb-1">Error!</h2>
+              <p className="text-sm">
+                Failed to post comment. Please try again.
+              </p>
+            </div>
+            <button
+              onClick={() => toast.dismiss(t)}
+              className="text-white hover:text-gray-200"
+            >
+              <X size={20} />
+            </button>
+          </div>
+        ));
+      }
     }
   };
 
@@ -379,19 +464,18 @@ function AuthorBio() {
         </div>
         <div>
           <p className="text-sm">Author</p>
-          <h3 className="text-2xl font-bold">Thompson P.</h3>
+          <h3 className="text-2xl font-bold">Naiyana T.</h3>
         </div>
       </div>
       <hr className="border-gray-300 mb-4" />
       <div className="text-muted-foreground space-y-4">
         <p>
-          I am a pet enthusiast and freelance writer who specializes in animal
-          behavior and care. With a deep love for cats, I enjoy sharing insights
-          on feline companionship and wellness.
+        👨‍💻 I'm a developer who loves coding, cooking, and creativity.<br /><br />
+          🍳 When I'm not debugging, you'll probably find me experimenting in the kitchen.<br /><br />
+          🎬 Movies and games are my favorite ways to unwind and get inspired.
         </p>
         <p>
-          When I&apos;m not writing, I spend time volunteering at my local
-          animal shelter, helping cats find loving homes.
+        When I'm not coding, I love cooking, watching movies, and playing games.
         </p>
       </div>
     </div>

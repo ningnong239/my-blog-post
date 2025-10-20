@@ -1,44 +1,62 @@
 /* eslint-disable react-refresh/only-export-components */
 /* eslint-disable react/prop-types */
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { authService } from "../services/supabaseService";
+import { debugComponent, debugError } from "../utils/debug";
 
 const AuthContext = React.createContext();
 
 function AuthProvider(props) {
   const [state, setState] = useState({
-    loading: null,
-    getUserLoading: null,
+    loading: false,
+    getUserLoading: false,
     error: null,
     user: null,
   });
 
   const navigate = useNavigate();
 
-  // Fetch user details using Supabase API
+  // Fetch user details
   const fetchUser = async () => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      setState((prevState) => ({
-        ...prevState,
-        user: null,
-        getUserLoading: false,
-      }));
-      return;
-    }
-
+    debugComponent("AuthProvider", "Fetching user from Supabase");
+    
     try {
       setState((prevState) => ({ ...prevState, getUserLoading: true }));
-      const response = await axios.get(
-        "https://myblogpostserver.vercel.app/auth/get-user"
-      );
+      
+      const result = await authService.getCurrentUser();
+      
+      if (result.error) {
+        throw result.error;
+      }
+      
+      if (!result.data) {
+        debugComponent("AuthProvider", "No user found");
+        setState((prevState) => ({
+          ...prevState,
+          user: null,
+          getUserLoading: false,
+        }));
+        return;
+      }
+      
+      // Get user profile
+      const profileResult = await authService.getUserProfile(result.data.id);
+      
+      const userData = {
+        ...result.data,
+        ...profileResult.data
+      };
+      
+      debugComponent("AuthProvider", "User fetched successfully");
       setState((prevState) => ({
         ...prevState,
-        user: response.data,
+        user: userData,
         getUserLoading: false,
       }));
+      
     } catch (error) {
+      debugError(error, "fetchUser");
       setState((prevState) => ({
         ...prevState,
         error: error.message,
@@ -54,53 +72,91 @@ function AuthProvider(props) {
 
   // Login user
   const login = async (data) => {
+    debugComponent("AuthProvider", "Starting login process");
+    
     try {
       setState((prevState) => ({ ...prevState, loading: true, error: null }));
-      const response = await axios.post(
-        "https://myblogpostserver.vercel.app/auth/login",
-        data
-      );
-      const token = response.data.access_token;
-      localStorage.setItem("token", token);
-
-      // Fetch and set user details
-      setState((prevState) => ({ ...prevState, loading: false, error: null }));
+      
+      const result = await authService.signIn(data.email, data.password);
+      
+      if (result.error) {
+        throw result.error;
+      }
+      
+      debugComponent("AuthProvider", "Login successful, fetching user data");
+      
+      // Set user data directly from Supabase session
+      const userData = {
+        ...result.data.user,
+        access_token: result.data.session?.access_token
+      };
+      
+      setState((prevState) => ({
+        ...prevState,
+        user: userData,
+        loading: false,
+        error: null,
+      }));
+      
+      debugComponent("AuthProvider", "Navigating to home page");
       navigate("/");
-      await fetchUser();
+      
+      return; // Success
+      
     } catch (error) {
+      debugError(error, "login");
       setState((prevState) => ({
         ...prevState,
         loading: false,
-        error: error.response?.data?.error || "Login failed",
+        error: error.message || "Login failed",
       }));
-      return { error: error.response?.data?.error || "Login failed" };
+      return { error: error.message || "Login failed" };
     }
   };
 
   // Register user
   const register = async (data) => {
+    debugComponent("AuthProvider", "Starting registration process");
+    
     try {
       setState((prevState) => ({ ...prevState, loading: true, error: null }));
-      await axios.post(
-        "https://myblogpostserver.vercel.app/auth/register",
-        data
-      );
+      
+      const result = await authService.signUp(data.email, data.password, data.name);
+      
+      if (result.error) {
+        throw result.error;
+      }
+      
+      debugComponent("AuthProvider", "Registration successful");
+      console.log("✅ Registration completed:", result.data);
+      
       setState((prevState) => ({ ...prevState, loading: false, error: null }));
       navigate("/sign-up/success");
+      return; // Success
+      
     } catch (error) {
+      debugError(error, "register");
+      console.error("❌ Registration failed:", error);
       setState((prevState) => ({
         ...prevState,
         loading: false,
-        error: error.response?.data?.error || "Registration failed",
+        error: error.message || "Registration failed",
       }));
-      return { error: state.error };
+      return { error: error.message || "Registration failed" };
     }
   };
 
   // Logout user
-  const logout = () => {
-    localStorage.removeItem("token");
-    setState({ user: null, error: null, loading: null });
+  const logout = async () => {
+    debugComponent("AuthProvider", "Starting logout process");
+    
+    try {
+      await authService.signOut();
+    } catch (error) {
+      debugError(error, "logout");
+    }
+    
+    setState({ user: null, error: null, loading: false });
     navigate("/");
   };
 

@@ -13,7 +13,8 @@ import {
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import axios from "axios";
+import { categoriesService } from "@/services/supabaseService";
+import { debugComponent, debugError } from "@/utils/debug";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import {
@@ -32,16 +33,22 @@ export default function AdminCategoryManagementPage() {
   const [filteredCategories, setFilteredCategories] = useState([]);
   const [searchKeyword, setSearchKeyword] = useState("");
 
-  // Fetch post data by ID
+  // Fetch categories data
   useEffect(() => {
-    const fetchPost = async () => {
+    const fetchCategories = async () => {
       try {
         setIsLoading(true);
-        const responseCategories = await axios.get(
-          "http://localhost:4001/categories"
-        );
-        setCategories(responseCategories.data);
+        debugComponent("AdminCategoryPage", "Fetching categories");
+        
+        const result = await categoriesService.getCategories();
+        if (result.error) {
+          throw result.error;
+        }
+        setCategories(result.data || []);
+        
+        debugComponent("AdminCategoryPage", "Categories fetched successfully");
       } catch (error) {
+        debugError(error, "fetchCategories");
         console.error("Error fetching categories data:", error);
         navigate("*");
       } finally {
@@ -49,7 +56,7 @@ export default function AdminCategoryManagementPage() {
       }
     };
 
-    fetchPost();
+    fetchCategories();
   }, [navigate]);
 
   useEffect(() => {
@@ -62,9 +69,11 @@ export default function AdminCategoryManagementPage() {
   const handleDelete = async (categoryId) => {
     try {
       setIsLoading(true);
-      await axios.delete(
-        `http://localhost:4001/categories/${categoryId}`
-      );
+      const result = await categoriesService.deleteCategory(categoryId);
+      
+      if (result.error) {
+        throw result.error;
+      }
       toast.custom((t) => (
         <div className="bg-green-500 text-white p-4 rounded-sm flex justify-between items-start">
           <div>

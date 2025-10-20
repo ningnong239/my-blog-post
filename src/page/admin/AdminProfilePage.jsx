@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { useAuth } from "@/contexts/authentication";
 import { toast } from "sonner";
-import axios from "axios";
+import { authService } from "@/services/supabaseService";
 
 export default function AdminProfilePage() {
   const { state, fetchUser } = useAuth();
@@ -126,13 +126,16 @@ export default function AdminProfilePage() {
         formData.append("imageFile", imageFile);
       }
 
-      await axios.put(
-        "http://localhost:4001/profile",
-        formData,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-        }
-      );
+      // Update profile using Supabase
+      const result = await authService.updateProfile(state.user.id, {
+        name: profile.name,
+        username: profile.username,
+        profile_pic: profile.image
+      });
+
+      if (result.error) {
+        throw result.error;
+      }
 
       toast.custom((t) => (
         <div className="bg-green-500 text-white p-4 rounded-sm flex justify-between items-start">
@@ -174,8 +177,12 @@ export default function AdminProfilePage() {
     <div className="flex h-screen bg-gray-100">
       <AdminSidebar />
       <main className="flex-1 p-8 bg-gray-50 overflow-auto">
-        <div className="flex justify-between items-center mb-6">
+        {/* Removed logo section at the top */}
+        <div className="flex items-center mb-8">
           <h2 className="text-2xl font-semibold">Profile</h2>
+        </div>
+
+        <div className="flex justify-end items-center mb-6">
           <Button
             className="px-8 py-2 rounded-full"
             onClick={handleSave}
