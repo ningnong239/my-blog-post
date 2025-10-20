@@ -19,8 +19,9 @@ import {
 } from "@/components/ui/table";
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
 import { useEffect, useState } from "react";
+import { postsService, categoriesService } from "@/services/supabaseService";
+import { debugComponent, debugError } from "@/utils/debug";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
@@ -46,17 +47,28 @@ export default function AdminArticleManagementPage() {
     setIsLoading(true);
     const fetchPosts = async () => {
       try {
-        const response = await axios.get(
-          "http://localhost:4001/posts/admin"
-        );
-        setPosts(response.data.posts);
-        setFilteredPosts(response.data.posts);
-        const responseCategories = await axios.get(
-          "http://localhost:4001/categories"
-        );
-        setCategories(responseCategories.data);
+        setIsLoading(true);
+        debugComponent("AdminArticlePage", "Fetching posts and categories");
+        
+        // Fetch posts
+        const postsResult = await postsService.getPosts({ page: 1, limit: 100 });
+        if (postsResult.error) {
+          throw postsResult.error;
+        }
+        setPosts(postsResult.data.posts || []);
+        setFilteredPosts(postsResult.data.posts || []);
+        
+        // Fetch categories
+        const categoriesResult = await categoriesService.getCategories();
+        if (categoriesResult.error) {
+          throw categoriesResult.error;
+        }
+        setCategories(categoriesResult.data || []);
+        
+        debugComponent("AdminArticlePage", "Data fetched successfully");
       } catch (error) {
-        console.error(error);
+        debugError(error, "fetchPosts");
+        console.error("Failed to fetch data:", error);
       } finally {
         setIsLoading(false);
       }
@@ -97,9 +109,11 @@ export default function AdminArticleManagementPage() {
   const handleDelete = async (postId) => {
     try {
       setIsLoading(true);
-      await axios.delete(
-        `http://localhost:4001/posts/${postId}`
-      );
+      const result = await postsService.deletePost(postId);
+      
+      if (result.error) {
+        throw result.error;
+      }
       toast.custom((t) => (
         <div className="bg-green-500 text-white p-4 rounded-sm flex justify-between items-start">
           <div>
