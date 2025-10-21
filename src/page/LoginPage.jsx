@@ -77,9 +77,43 @@ export default function LoginPage() {
       } catch (error) {
         console.log("💥 [handleSubmit] === LOGIN PAGE ERROR ===");
         console.log("💥 [handleSubmit] Login page error:", error);
+        // Show error toast
+        toast.custom((t) => (
+          <div className="bg-red-500 text-white p-4 rounded-sm flex justify-between items-start">
+            <div>
+              <h2 className="font-bold text-lg mb-1">Login failed</h2>
+              <p className="text-sm">Please check your credentials and try again</p>
+            </div>
+            <button
+              onClick={() => toast.dismiss(t)}
+              className="text-white hover:text-gray-200"
+            >
+              <X size={20} />
+            </button>
+          </div>
+        ));
       }
     } else {
       console.log("⚠️ [handleSubmit] Validation errors found, not attempting login");
+      // Show validation error toast
+      toast.custom((t) => (
+        <div className="bg-yellow-500 text-white p-4 rounded-sm flex justify-between items-start">
+          <div>
+            <h2 className="font-bold text-lg mb-1">Please fix the following errors:</h2>
+            <ul className="text-sm list-disc list-inside">
+              {Object.values(errors).map((error, index) => (
+                <li key={index}>{error}</li>
+              ))}
+            </ul>
+          </div>
+          <button
+            onClick={() => toast.dismiss(t)}
+            className="text-white hover:text-gray-200"
+          >
+            <X size={20} />
+          </button>
+        </div>
+      ));
     }
   };
 
