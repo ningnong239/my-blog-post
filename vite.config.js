@@ -11,8 +11,8 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  // ใช้ default build configuration ของ Vite
   build: {
+    // เพิ่มขนาด limit เป็น 1000 kB เพื่อลด warning
     chunkSizeWarningLimit: 1000,
   },
 });
