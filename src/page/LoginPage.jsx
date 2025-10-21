@@ -39,28 +39,47 @@ export default function LoginPage() {
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log("🧾 [handleSubmit] Email:", formValues.email);
+    console.log("🧾 [handleSubmit] Password:", formValues.password);
+    console.log("=== LOGIN PAGE SUBMIT START ===");
+    console.log("Form values:", formValues);
+    
     const errors = validateInputs();
     setFormErrors(errors);
 
     if (Object.keys(errors).length === 0) {
-      const result = await login(formValues);
-      if (result?.error) {
-        return toast.custom((t) => (
-          <div className="bg-red-500 text-white p-4 rounded-sm flex justify-between items-start">
-            <div>
-              <h2 className="font-bold text-lg mb-1">{result.error}</h2>
-              <p className="text-sm">Please try another password or email</p>
+      console.log("✅ [handleSubmit] No validation errors, attempting login...");
+      console.log("🚀 [handleSubmit] Login attempt with:", formValues);
+      
+      try {
+        console.log("🚀 [handleSubmit] Calling login function with:", formValues);
+        const result = await login(formValues);
+        console.log("📨 [handleSubmit] Login result:", result);
+        
+        if (result?.error) {
+          console.log("❌ [handleSubmit] Login error:", result.error);
+          return toast.custom((t) => (
+            <div className="bg-red-500 text-white p-4 rounded-sm flex justify-between items-start">
+              <div>
+                <h2 className="font-bold text-lg mb-1">{result.error}</h2>
+                <p className="text-sm">Please try another password or email</p>
+              </div>
+              <button
+                onClick={() => toast.dismiss(t)}
+                className="text-white hover:text-gray-200"
+              >
+                <X size={20} />
+              </button>
             </div>
-            <button
-              onClick={() => toast.dismiss(t)}
-              className="text-white hover:text-gray-200"
-            >
-              <X size={20} />
-            </button>
-          </div>
-        ));
+          ));
+        }
+        console.log("🎉 [handleSubmit] === LOGIN PAGE SUCCESS ===");
+      } catch (error) {
+        console.log("💥 [handleSubmit] === LOGIN PAGE ERROR ===");
+        console.log("💥 [handleSubmit] Login page error:", error);
       }
-      navigate("/");
+    } else {
+      console.log("⚠️ [handleSubmit] Validation errors found, not attempting login");
     }
   };
 

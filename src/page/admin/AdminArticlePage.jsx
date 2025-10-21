@@ -1,5 +1,5 @@
 /* eslint-disable react/prop-types */
-import { PenSquare, Trash2, X } from "lucide-react";
+import { PenSquare, Trash2, X, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -32,6 +32,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabase";
 
 export default function AdminArticleManagementPage() {
   const navigate = useNavigate();
@@ -47,25 +48,36 @@ export default function AdminArticleManagementPage() {
     setIsLoading(true);
     const fetchPosts = async () => {
       try {
-        setIsLoading(true);
-        debugComponent("AdminArticlePage", "Fetching posts and categories");
+        console.log("🔄 [AdminArticlePage] Fetching posts from Supabase...");
         
-        // Fetch posts
-        const postsResult = await postsService.getPosts({ page: 1, limit: 100 });
-        if (postsResult.error) {
-          throw postsResult.error;
+        // Fetch posts from Supabase
+        const { data: postsData, error: postsError } = await supabase
+          .from('posts')
+          .select('*')
+          .order('date', { ascending: false });
+
+        if (postsError) {
+          console.error("❌ [AdminArticlePage] Posts error:", postsError);
+          throw postsError;
         }
-        setPosts(postsResult.data.posts || []);
-        setFilteredPosts(postsResult.data.posts || []);
-        
-        // Fetch categories
-        const categoriesResult = await categoriesService.getCategories();
-        if (categoriesResult.error) {
-          throw categoriesResult.error;
+
+        console.log("✅ [AdminArticlePage] Posts data:", postsData);
+        setPosts(postsData || []);
+        setFilteredPosts(postsData || []);
+
+        // Fetch categories from Supabase
+        const { data: categoriesData, error: categoriesError } = await supabase
+          .from('categories')
+          .select('*')
+          .order('id', { ascending: true });
+
+        if (categoriesError) {
+          console.error("❌ [AdminArticlePage] Categories error:", categoriesError);
+          throw categoriesError;
         }
-        setCategories(categoriesResult.data || []);
-        
-        debugComponent("AdminArticlePage", "Data fetched successfully");
+
+        console.log("✅ [AdminArticlePage] Categories data:", categoriesData);
+        setCategories(categoriesData || []);
       } catch (error) {
         debugError(error, "fetchPosts");
         console.error("Failed to fetch data:", error);
@@ -109,11 +121,19 @@ export default function AdminArticleManagementPage() {
   const handleDelete = async (postId) => {
     try {
       setIsLoading(true);
-      const result = await postsService.deletePost(postId);
+      console.log("🔄 [AdminArticlePage] Deleting post from Supabase:", postId);
       
-      if (result.error) {
-        throw result.error;
+      const { error } = await supabase
+        .from('posts')
+        .delete()
+        .eq('id', postId);
+
+      if (error) {
+        console.error("❌ [AdminArticlePage] Delete error:", error);
+        throw error;
       }
+
+      console.log("✅ [AdminArticlePage] Post deleted successfully");
       toast.custom((t) => (
         <div className="bg-green-500 text-white p-4 rounded-sm flex justify-between items-start">
           <div>
@@ -159,12 +179,20 @@ export default function AdminArticleManagementPage() {
       <main className="flex-1 p-8 overflow-auto">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-semibold">Article management</h2>
-          <Button
-            className="px-8 py-2 rounded-full"
-            onClick={() => navigate("/admin/article-management/create")}
-          >
-            <PenSquare className="mr-2 h-4 w-4" /> Create article
-          </Button>
+          <div className="flex space-x-4">
+            <Button
+              className="px-8 py-2 rounded-full"
+              onClick={() => navigate("/admin/category-management")}
+            >
+              <FolderOpen className="mr-2 h-4 w-4" /> Category management
+            </Button>
+            <Button
+              className="px-8 py-2 rounded-full"
+              onClick={() => navigate("/admin/create-article")}
+            >
+              <PenSquare className="mr-2 h-4 w-4" /> Create article
+            </Button>
+          </div>
         </div>
         <div className="flex space-x-4 mb-6">
           <div className="flex-1">
@@ -254,7 +282,7 @@ export default function AdminArticleManagementPage() {
                       variant="ghost"
                       size="sm"
                       onClick={() =>
-                        navigate(`/admin/article-management/edit/${article.id}`)
+                        navigate(`/admin/edit-article/${article.id}`)
                       }
                     >
                       <PenSquare className="h-4 w-4 hover:text-muted-foreground" />

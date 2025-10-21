@@ -29,6 +29,7 @@ import {
 import { useAuth } from "@/contexts/authentication";
 import { Skeleton } from "@/components/ui/skeleton";
 import logoImage from "../assets/ning.jpg"; // รูปโลโก้
+import ntLogo from "../assets/NT.png"; // รูปโลโก้ NT
 
 export function NavBar() {
   const navigate = useNavigate();
@@ -43,8 +44,8 @@ export function NavBar() {
         style={{ minWidth: 0 }}
       >
         <img
-          src={logoImage}
-          alt="Logo"
+          src={ntLogo}
+          alt="Logo NT"
           className="h-10 w-10 object-cover rounded-full shadow-lg shadow-indigo-200"
           style={{ minWidth: 40, minHeight: 40 }}
         />
@@ -72,7 +73,7 @@ export function NavBar() {
             Log in
           </button>
           <button
-            onClick={() => navigate("/sign-up")}
+            onClick={() => navigate("/signup")}
             className="px-8 py-2 bg-[#F59E42] text-[#1E293B] rounded-full hover:bg-[#FDE68A] hover:text-[#1E293B] transition-colors font-semibold shadow-md"
           >
             Sign up
@@ -172,7 +173,7 @@ export function NavBar() {
                 Log in
               </button>
               <button
-                onClick={() => navigate("/sign-up")}
+                onClick={() => navigate("/signup")}
                 className="px-8 py-4 bg-[#F59E42] text-center text-[#1E293B] rounded-full hover:bg-[#FDE68A] hover:text-[#1E293B] transition-colors font-semibold shadow"
               >
                 Sign up

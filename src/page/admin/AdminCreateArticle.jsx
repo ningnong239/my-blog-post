@@ -16,6 +16,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabase";
 
 export default function AdminCreateArticlePage() {
   const { state } = useAuth();
@@ -38,10 +39,20 @@ export default function AdminCreateArticlePage() {
     const fetchCategories = async () => {
       try {
         setIsLoading(true);
-        const responseCategories = await axios.get(
-          "http://localhost:4001/categories"
-        );
-        setCategories(responseCategories.data);
+        console.log("🔄 [AdminCreateArticle] Fetching categories from Supabase...");
+        
+        const { data: categoriesData, error: categoriesError } = await supabase
+          .from('categories')
+          .select('*')
+          .order('id', { ascending: true });
+
+        if (categoriesError) {
+          console.error("❌ [AdminCreateArticle] Categories error:", categoriesError);
+          throw categoriesError;
+        }
+
+        console.log("✅ [AdminCreateArticle] Categories data:", categoriesData);
+        setCategories(categoriesData || []);
       } catch (error) {
         console.error("Error fetching categories data:", error);
         navigate("*");
@@ -82,13 +93,27 @@ export default function AdminCreateArticlePage() {
     formData.append("imageFile", imageFile.file);
 
     try {
-      await axios.post(
-        "http://localhost:4001/posts",
-        formData,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-        }
-      );
+      console.log("🔄 [AdminCreateArticle] Creating post in Supabase...");
+      console.log("📤 [AdminCreateArticle] Post data:", post);
+      
+      const { data, error } = await supabase
+        .from('posts')
+        .insert({
+          title: post.title,
+          description: post.description,
+          content: post.content,
+          image: post.image,
+          date: new Date().toISOString(),
+          likes_count: 0,
+          category_id: post.category_id
+        });
+
+      if (error) {
+        console.error("❌ [AdminCreateArticle] Create error:", error);
+        throw error;
+      }
+
+      console.log("✅ [AdminCreateArticle] Post created successfully:", data);
 
       toast.custom((t) => (
         <div className="bg-green-500 text-white p-4 rounded-sm flex justify-between items-start">

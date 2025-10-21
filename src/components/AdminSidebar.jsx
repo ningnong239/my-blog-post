@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useLocation, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/authentication";
+import ntLogo from "../assets/NT.png";
 
 export function AdminSidebar() {
   const { logout } = useAuth();
@@ -18,13 +19,15 @@ export function AdminSidebar() {
   const isActive = (basePath) => location.pathname.startsWith(basePath);
 
   return (
-    <aside className="w-64 bg-blue-500 shadow-md">
-      <div className="p-4 flex flex-col items-center">
-        <img
-          src="/ning.jpg"
-          alt="Ning"
-          className="w-16 h-16 rounded-full mb-2 object-cover"
-        />
+    <aside className="w-64 bg-white shadow-md">
+      <div className="p-4">
+        <div className="flex items-center mb-2">
+          <img
+            src={ntLogo}
+            alt="Logo"
+            className="w-10 h-10 rounded-full mr-3 object-cover"
+          />
+        </div>
         <p className="text-sm text-orange-400">Admin panel</p>
       </div>
       <nav className="mt-6">

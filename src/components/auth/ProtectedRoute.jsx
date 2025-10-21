@@ -22,7 +22,13 @@ function ProtectedRoute({
 
   if (!isAuthenticated || userRole !== requiredRole) {
     // Return null while navigate performs the redirection
-    return <Navigate to="/login" replace />;
+    // Redirect to admin login for admin routes, regular login for user routes
+    const redirectPath = requiredRole === 'admin' ? '/admin/login' : '/login';
+    console.log("🚫 [ProtectedRoute] Access denied. Redirecting to:", redirectPath);
+    console.log("🚫 [ProtectedRoute] isAuthenticated:", isAuthenticated);
+    console.log("🚫 [ProtectedRoute] userRole:", userRole);
+    console.log("🚫 [ProtectedRoute] requiredRole:", requiredRole);
+    return <Navigate to={redirectPath} replace />;
   }
 
   // User is authenticated and has the correct role

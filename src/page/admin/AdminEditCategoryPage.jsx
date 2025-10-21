@@ -17,6 +17,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { supabase } from "@/lib/supabase";
 
 export default function AdminEditCategoryPage() {
   const navigate = useNavigate();
@@ -31,11 +32,24 @@ export default function AdminEditCategoryPage() {
     const fetchCategory = async () => {
       try {
         setIsLoading(true);
-        const response = await axios.get(
-          `http://localhost:4001/categories/${categoryId}`
-        );
-        setCategoryName(response.data.name); // Set the category name
-      } catch {
+        console.log("🔄 [AdminEditCategory] Fetching category from Supabase...");
+        console.log("📤 [AdminEditCategory] Category ID:", categoryId);
+        
+        const { data, error } = await supabase
+          .from('categories')
+          .select('*')
+          .eq('id', categoryId)
+          .single();
+
+        if (error) {
+          console.error("❌ [AdminEditCategory] Fetch error:", error);
+          throw error;
+        }
+
+        console.log("✅ [AdminEditCategory] Category data:", data);
+        setCategoryName(data.name); // Set the category name
+      } catch (error) {
+        console.error("💥 [AdminEditCategory] Fetch error:", error);
         toast.custom((t) => (
           <div className="bg-red-500 text-white p-4 rounded-sm flex justify-between items-start">
             <div>
@@ -70,12 +84,23 @@ export default function AdminEditCategoryPage() {
     setIsSaving(true);
 
     try {
-      await axios.put(
-        `http://localhost:4001/categories/${categoryId}`,
-        {
+      console.log("🔄 [AdminEditCategory] Updating category in Supabase...");
+      console.log("📤 [AdminEditCategory] Category ID:", categoryId);
+      console.log("📤 [AdminEditCategory] New name:", categoryName);
+      
+      const { data, error } = await supabase
+        .from('categories')
+        .update({
           name: categoryName,
-        }
-      );
+        })
+        .eq('id', categoryId);
+
+      if (error) {
+        console.error("❌ [AdminEditCategory] Update error:", error);
+        throw error;
+      }
+
+      console.log("✅ [AdminEditCategory] Category updated successfully:", data);
 
       toast.custom((t) => (
         <div className="bg-green-500 text-white p-4 rounded-sm flex justify-between items-start">
@@ -124,10 +149,21 @@ export default function AdminEditCategoryPage() {
 
   const handleDelete = async () => {
     try {
+      console.log("🔄 [AdminEditCategory] Deleting category from Supabase...");
+      console.log("📤 [AdminEditCategory] Category ID:", categoryId);
+      
+      const { error } = await supabase
+        .from('categories')
+        .delete()
+        .eq('id', categoryId);
+
+      if (error) {
+        console.error("❌ [AdminEditCategory] Delete error:", error);
+        throw error;
+      }
+
+      console.log("✅ [AdminEditCategory] Category deleted successfully");
       navigate("/admin/category-management");
-      await axios.delete(
-        `http://localhost:4001/categories/${categoryId}`
-      );
 
       toast.custom((t) => (
         <div className="bg-green-500 text-white p-4 rounded-sm flex justify-between items-start">

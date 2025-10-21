@@ -6,6 +6,7 @@ import axios from "axios";
 import { toast } from "sonner";
 import { X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/lib/supabase";
 
 export default function AdminCreateCategoryPage() {
   const navigate = useNavigate();
@@ -23,13 +24,22 @@ export default function AdminCreateCategoryPage() {
     setIsSaving(true);
 
     try {
-      // Send POST request to create the category
-      await axios.post(
-        "http://localhost:4001/categories",
-        {
-          name: categoryName,
-        }
-      );
+      console.log("🔄 [AdminCreateCategory] Creating category in Supabase...");
+      console.log("📤 [AdminCreateCategory] Category name:", categoryName);
+      
+      // Create category in Supabase
+      const { data, error } = await supabase
+        .from('categories')
+        .insert({
+          name: categoryName
+        });
+
+      if (error) {
+        console.error("❌ [AdminCreateCategory] Create error:", error);
+        throw error;
+      }
+
+      console.log("✅ [AdminCreateCategory] Category created successfully:", data);
 
       // Show success toast
       toast.custom((t) => (

@@ -1,4 +1,4 @@
-/* eslint-disable react/prop-types */
+
 import { PenSquare, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,15 +38,15 @@ export default function AdminCategoryManagementPage() {
     const fetchCategories = async () => {
       try {
         setIsLoading(true);
-        debugComponent("AdminCategoryPage", "Fetching categories");
+        const { data: categoriesData, error: categoriesError } = await categoriesService.getCategories();
         
-        const result = await categoriesService.getCategories();
-        if (result.error) {
-          throw result.error;
+        if (categoriesError) {
+          console.error("❌ [AdminCategoryPage] Categories error:", categoriesError);
+          throw categoriesError;
         }
-        setCategories(result.data || []);
-        
-        debugComponent("AdminCategoryPage", "Categories fetched successfully");
+
+        console.log("✅ [AdminCategoryPage] Categories data:", categoriesData);
+        setCategories(categoriesData || []);
       } catch (error) {
         debugError(error, "fetchCategories");
         console.error("Error fetching categories data:", error);
@@ -69,11 +69,17 @@ export default function AdminCategoryManagementPage() {
   const handleDelete = async (categoryId) => {
     try {
       setIsLoading(true);
-      const result = await categoriesService.deleteCategory(categoryId);
+      console.log("🔄 [AdminCategoryPage] Deleting category from Supabase...");
+      console.log("📤 [AdminCategoryPage] Category ID:", categoryId);
       
-      if (result.error) {
-        throw result.error;
+      const { error } = await categoriesService.deleteCategory(categoryId);
+
+      if (error) {
+        console.error("❌ [AdminCategoryPage] Delete error:", error);
+        throw error;
       }
+
+      console.log("✅ [AdminCategoryPage] Category deleted successfully");
       toast.custom((t) => (
         <div className="bg-green-500 text-white p-4 rounded-sm flex justify-between items-start">
           <div>
@@ -127,7 +133,7 @@ export default function AdminCategoryManagementPage() {
           <h2 className="text-2xl font-semibold">Category management</h2>
           <Button
             className="px-8 py-2 rounded-full"
-            onClick={() => navigate("/admin/category-management/create")}
+            onClick={() => navigate("/admin/create-category")}
           >
             <PenSquare className="mr-2 h-4 w-4" /> Create category
           </Button>
@@ -174,7 +180,7 @@ export default function AdminCategoryManagementPage() {
                       size="sm"
                       onClick={() => {
                         navigate(
-                          `/admin/category-management/edit/${category.id}`
+                          `/admin/edit-category/${category.id}`
                         );
                       }}
                     >

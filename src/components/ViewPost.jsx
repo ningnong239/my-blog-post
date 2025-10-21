@@ -22,9 +22,8 @@ import authorImage from "../assets/ning.jpg";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/authentication";
-import { postsService, commentsService } from "@/services/supabaseService";
-import { debugComponent, debugError } from "@/utils/debug";
-import { blogPosts } from "@/data/blogPosts";
+import { postsAPI } from "@/config/api";
+import { blogPosts } from "../data/blogPosts";
 
 export default function ViewPost() {
   const [img, setImg] = useState("");
@@ -51,70 +50,37 @@ export default function ViewPost() {
 
   const getPost = async () => {
     setIsLoading(true);
-    debugComponent("ViewPost", `Fetching post with ID: ${param.postId}`);
-    
     try {
-      // Get post data from Supabase
-      const postResult = await postsService.getPostById(param.postId);
-      
-      if (postResult.error) {
-        throw postResult.error;
-      }
-      
-      const post = postResult.data;
-      
-      // Check if post exists and has content
-      if (!post || !post.title || !post.content) {
-        console.log("⚠️ Post data incomplete from Supabase, trying fallback data");
-        throw new Error("Incomplete post data");
-      }
-      
-      debugComponent("ViewPost", "Post data fetched successfully from Supabase");
-      
-      setImg(post.image);
-      setTitle(post.title);
-      setDate(post.date);
-      setDescription(post.description);
-      setCategory(post.categories?.name || 'General');
-      setContent(post.content);
-      setLikes(post.likes_count || 0);
-      setUseFallbackData(false);
-      
-      // Get comments from Supabase
-      const commentsResult = await commentsService.getComments(param.postId);
-      
-      if (commentsResult.error) {
-        console.warn("Failed to fetch comments:", commentsResult.error);
-        setComments([]);
-      } else {
-        setComments(commentsResult.data || []);
-      }
-      
+      const postsResponse = await postsAPI.getById(param.postId);
+      setImg(postsResponse.image);
+      setTitle(postsResponse.title);
+      setDate(postsResponse.date);
+      setDescription(postsResponse.description);
+      setCategory(postsResponse.category);
+      setContent(postsResponse.content);
+      const likesResponse = await axios.get(
+        `https://myblogpostserver.vercel.app/posts/${param.postId}/likes`
+      );
+      setLikes(likesResponse.data.like_count);
+      const commentsResponse = await axios.get(
+        `https://myblogpostserver.vercel.app/posts/${param.postId}/comments`
+        `https://myblogpostserver.vercel.app/posts/${param.postId}/comments`
+      );
+      setComments(commentsResponse.data);
       setIsLoading(false);
     } catch (error) {
-      debugError(error, "getPost");
-      console.log("❌ Failed to fetch post from Supabase, using fallback data");
-      
-      // Try to find post in fallback data
-      const fallbackPost = blogPosts.find(post => post.id === parseInt(param.postId));
-      
-      if (fallbackPost) {
-        console.log("✅ Found post in fallback data");
-        setImg(fallbackPost.image);
-        setTitle(fallbackPost.title);
-        setDate(fallbackPost.date);
-        setDescription(fallbackPost.description);
-        setCategory(fallbackPost.category);
-        setContent(fallbackPost.content);
-        setLikes(fallbackPost.likes || 0);
-        setComments([]); // No comments for fallback data
-        setUseFallbackData(true);
-        setIsLoading(false);
-      } else {
-        console.error("❌ Post not found in fallback data either");
-        setIsLoading(false);
-        navigate("*");
-      }
+      console.log("Post API error:", error);
+      // Use fallback post from mock data if API fails
+      const fallbackPost = blogPosts.find(post => post.id === parseInt(param.postId)) || blogPosts[0];
+      setImg(fallbackPost.image);
+      setTitle(fallbackPost.title);
+      setDate(fallbackPost.date);
+      setDescription(fallbackPost.description);
+      setCategory(fallbackPost.category);
+      setContent(fallbackPost.content);
+      setLikes(fallbackPost.likes || 0);
+      setComments([]); // No comments for fallback data
+      setIsLoading(false);
     }
   };
 
@@ -210,26 +176,30 @@ function Share({ likesAmount, setDialogState, user, setLikes }) {
 
     setIsLiking(true);
     try {
-      // For now, just increment the like count locally
-      // TODO: Implement proper like/unlike functionality with Supabase
-      setLikes(prev => prev + 1);
-      
-      toast.custom((t) => (
-        <div className="bg-green-500 text-white p-4 rounded-sm flex justify-between items-start max-w-md w-full">
-          <div>
-            <h2 className="font-bold text-lg mb-1">Liked!</h2>
-            <p className="text-sm">
-              You liked this post.
-            </p>
-          </div>
-          <button
-            onClick={() => toast.dismiss(t)}
-            className="text-white hover:text-gray-200"
-          >
-            <X size={20} />
-          </button>
-        </div>
-      ));
+      // First try to like the post
+      try {
+        await axios.post(
+          `https://myblogpostserver.vercel.app/posts/${param.postId}/likes`
+          `https://myblogpostserver.vercel.app/posts/${param.postId}/likes`
+        );
+      } catch (error) {
+        // If we get a 500 error, assume the post is already liked and try to unlike
+        if (error.response?.status === 500) {
+          await axios.delete(
+            `https://myblogpostserver.vercel.app/posts/${param.postId}/likes`
+            `https://myblogpostserver.vercel.app/posts/${param.postId}/likes`
+          );
+        } else {
+          // If it's a different error, throw it to be caught by the outer try-catch
+          throw error;
+        }
+      }
+
+      // After either liking or unliking, get the updated like count
+      const likesResponse = await axios.get(
+        `https://myblogpostserver.vercel.app/posts/${param.postId}/likes`
+      );
+      setLikes(likesResponse.data.like_count);
     } catch (error) {
       console.error("Error handling like:", error);
     } finally {
@@ -321,59 +291,32 @@ function Comment({ setDialogState, commentList, setComments, user }) {
       setIsError(false);
       const commentToSubmit = commentText;
       setCommentText("");
-      
-      try {
-        const result = await commentsService.createComment({
-          post_id: param.postId,
-          user_id: user.id,
-          comment_text: commentToSubmit
-        });
-        
-        if (result.error) {
-          throw result.error;
-        }
-        
-        // Refresh comments
-        const commentsResult = await commentsService.getComments(param.postId);
-        if (!commentsResult.error) {
-          setComments(commentsResult.data || []);
-        }
-        
-        toast.custom((t) => (
-          <div className="bg-green-500 text-white p-4 rounded-sm flex justify-between items-start max-w-md w-full">
-            <div>
-              <h2 className="font-bold text-lg mb-1">Comment Posted!</h2>
-              <p className="text-sm">
-                Your comment has been successfully added to this post.
-              </p>
-            </div>
-            <button
-              onClick={() => toast.dismiss(t)}
-              className="text-white hover:text-gray-200"
-            >
-              <X size={20} />
-            </button>
+      await axios.post(
+        `https://myblogpostserver.vercel.app/posts/${param.postId}/comments`,
+        `https://myblogpostserver.vercel.app/posts/${param.postId}/comments`,
+        { comment: commentText }
+      );
+      const commentsResponse = await axios.get(
+        `https://myblogpostserver.vercel.app/posts/${param.postId}/comments`
+        `https://myblogpostserver.vercel.app/posts/${param.postId}/comments`
+      );
+      setComments(commentsResponse.data);
+      toast.custom((t) => (
+        <div className="bg-green-500 text-white p-4 rounded-sm flex justify-between items-start max-w-md w-full">
+          <div>
+            <h2 className="font-bold text-lg mb-1">Comment Posted!</h2>
+            <p className="text-sm">
+              Your comment has been successfully added to this post.
+            </p>
           </div>
-        ));
-      } catch (error) {
-        console.error("Failed to post comment:", error);
-        toast.custom((t) => (
-          <div className="bg-red-500 text-white p-4 rounded-sm flex justify-between items-start max-w-md w-full">
-            <div>
-              <h2 className="font-bold text-lg mb-1">Error!</h2>
-              <p className="text-sm">
-                Failed to post comment. Please try again.
-              </p>
-            </div>
-            <button
-              onClick={() => toast.dismiss(t)}
-              className="text-white hover:text-gray-200"
-            >
-              <X size={20} />
-            </button>
-          </div>
-        ));
-      }
+          <button
+            onClick={() => toast.dismiss(t)}
+            className="text-white hover:text-gray-200"
+          >
+            <X size={20} />
+          </button>
+        </div>
+      ));
     }
   };
 
@@ -470,12 +413,12 @@ function AuthorBio() {
       <hr className="border-gray-300 mb-4" />
       <div className="text-muted-foreground space-y-4">
         <p>
-        👨‍💻 I'm a developer who loves coding, cooking, and creativity.<br /><br />
+          👨‍💻 I'm a developer who loves coding, cooking, and creativity.<br /><br />
           🍳 When I'm not debugging, you'll probably find me experimenting in the kitchen.<br /><br />
           🎬 Movies and games are my favorite ways to unwind and get inspired.
         </p>
         <p>
-        When I'm not coding, I love cooking, watching movies, and playing games.
+          When I'm not coding, I love cooking, watching movies, and playing games.
         </p>
       </div>
     </div>
@@ -490,10 +433,10 @@ function CreateAccountModal({ dialogState, setDialogState }) {
         <AlertDialogTitle className="text-3xl font-semibold pb-2 text-center">
           Create an account to continue
         </AlertDialogTitle>
-        <button
-          onClick={() => navigate("/signup")}
-          className="rounded-full text-white bg-foreground hover:bg-muted-foreground transition-colors py-4 text-lg w-52"
-        >
+          <button
+            onClick={() => navigate("/sign-up")}
+            className="rounded-full text-white bg-foreground hover:bg-muted-foreground transition-colors py-4 text-lg w-52"
+          >
           Create account
         </button>
         <AlertDialogDescription className="flex flex-row gap-1 justify-center font-medium text-center pt-2 text-muted-foreground">

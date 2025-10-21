@@ -64,11 +64,17 @@ export default function SignUpPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log("🔄 [SignUpPage] Form submitted");
+    console.log("📤 [SignUpPage] Form values:", formValues);
+    
     const errors = validateInputs();
+    console.log("🔍 [SignUpPage] Validation errors:", errors);
     setFormErrors(errors);
 
     if (Object.keys(errors).length === 0) {
+      console.log("✅ [SignUpPage] No validation errors, calling register...");
       const result = await register(formValues);
+      console.log("📥 [SignUpPage] Register result:", result);
       if (result?.error) {
         let suggestionMessage = "";
 
@@ -99,6 +105,9 @@ export default function SignUpPage() {
             </button>
           </div>
         ));
+      } else {
+        // Registration successful, navigate to success page
+        navigate("/signup-success");
       }
     }
   };
