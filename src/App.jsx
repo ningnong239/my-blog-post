@@ -1,5 +1,5 @@
 import { Route, Routes } from "react-router-dom";
-import { useAuth } from "@/contexts/authentication";
+import { useAuth, AuthProvider } from "@/contexts/authentication";
 import jwtInterceptor from "./utils/jwtIntercepter.js";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import AuthenticationRoute from "./components/auth/AuthenticationRoute";
