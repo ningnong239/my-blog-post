@@ -1,7 +1,8 @@
 /* eslint-disable react/prop-types */
 import { useEffect, useState } from "react";
-import axios from "axios";
-import { Search, Loader2, AlertCircle } from "lucide-react";
+import { postsAPI, categoriesAPI } from "../config/api";
+import { blogPosts } from "../data/blogPosts";
+import { Search, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -13,12 +14,10 @@ import {
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "./ui/skeleton";
 import { BlogCard } from "./BlogCard";
-import { blogPosts } from "@/data/blogPosts";
-import { debugAPI, debugComponent, debugError } from "@/utils/debug";
-import { postsService, categoriesService, initializeDatabase } from "@/services/supabaseService";
+import { supabase } from "../lib/supabase";
 
 export default function Articles() {
-  // const categories = ["Highlight", "Cat", "Inspiration", "General"];
+ 
   const [category, setCategory] = useState("Highlight");
   const [posts, setPosts] = useState([]);
   const [page, setPage] = useState(1); // Current page state
@@ -34,143 +33,219 @@ export default function Articles() {
 
   const navigate = useNavigate();
 
-  // Fallback categories from blogPosts data
-  const getFallbackCategories = () => {
-    const uniqueCategories = [...new Set(blogPosts.map(post => post.category))];
-    return uniqueCategories.map((cat, index) => ({ id: index + 1, name: cat }));
-  };
-
-  // Try to fetch real data from Supabase after initial fallback load
-  useEffect(() => {
-    const fetchRealData = async () => {
-      try {
-        console.log("🔄 Trying to fetch real data from Supabase");
-        const [categoriesResult, postsResult] = await Promise.all([
-          categoriesService.getCategories(),
-          postsService.getPosts({ page: 1, limit: 6, category: category !== "Highlight" ? category : null })
-        ]);
+  // ฟังก์ชันสำหรับดึงข้อมูลโพสต์จาก Supabase
+  const fetchPostsFromSupabase = async () => {
+    try {
+      console.log("🔄 [fetchPostsFromSupabase] กำลังดึงข้อมูลโพสต์จาก Supabase...");
+      
+      // ดึงข้อมูลหมวดหมู่ก่อน
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('categories')
+        .select('id, name')
+        .order('id', { ascending: true });
+      
+      if (categoriesError) {
+        console.error("❌ [fetchPostsFromSupabase] Categories error:", categoriesError);
+        throw categoriesError;
+      }
+      
+      console.log("✅ [fetchPostsFromSupabase] ข้อมูลหมวดหมู่:", categoriesData);
+      
+      // สร้าง mapping สำหรับหมวดหมู่
+      const categoryMap = {};
+      categoriesData?.forEach(cat => {
+        categoryMap[cat.id] = cat.name;
+      });
+      
+      // ดึงข้อมูลโพสต์
+      const { data: postsData, error: postsError } = await supabase
+        .from('posts')
+        .select(`
+          id,
+          title,
+          description,
+          content,
+          image,
+          date,
+          likes_count
+        `)
+        .order('date', { ascending: false });
+      
+      if (postsError) {
+        console.error("❌ [fetchPostsFromSupabase] Supabase posts error:", postsError);
+        throw postsError;
+      }
+      
+      console.log("✅ [fetchPostsFromSupabase] ข้อมูลโพสต์จาก Supabase:", postsData);
+      
+      // แปลงข้อมูลให้ตรงกับรูปแบบที่ BlogCard ต้องการ
+      const transformedPosts = postsData?.map((post, index) => {
+        // กำหนดหมวดหมู่ตาม index (ชั่วคราว)
+        let categoryName = 'General';
+        if (index === 0) categoryName = 'Dev';
+        else if (index === 1) categoryName = 'Liftstyle';
+        else if (index === 2) categoryName = 'General';
+        else if (index === 3) categoryName = 'Liftstyle';
+        else categoryName = 'General';
         
-        if (!categoriesResult.error && !postsResult.error) {
-          // Only switch to real data if there are actual posts
-          if (postsResult.data.posts && postsResult.data.posts.length > 0) {
-            console.log("✅ Real data fetched successfully, switching from fallback");
-            setCategories(categoriesResult.data);
-            setPosts(postsResult.data.posts);
-            setHasMore(postsResult.data.hasMore);
-            setApiError(false);
-            setUseFallbackData(false);
-          } else {
-            console.log("⚠️ Real data fetched but no posts found, keeping fallback");
-            // Keep using fallback data
-          }
-        }
-      } catch (error) {
-        console.log("❌ Failed to fetch real data, keeping fallback:", error);
-        // Keep fallback data
-      }
-    };
-
-    // Try to fetch real data after a short delay
-    const timer = setTimeout(fetchRealData, 1000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Load fallback data immediately on mount
-  useEffect(() => {
-    console.log("🚀 Initial load - using fallback data");
-    const fallbackData = getFallbackPosts(1, 6, category);
-    setPosts(fallbackData.posts);
-    setHasMore(fallbackData.hasMore);
-    setCategories(getFallbackCategories());
-    setApiError(true); // Show that we're using fallback
-  }, []); // Run only once on mount
-
-  // Fallback posts from blogPosts data
-  const getFallbackPosts = (currentPage = 1, limit = 6, selectedCategory = "Highlight") => {
-    let filteredPosts = blogPosts;
-    
-    // Filter by category if not "Highlight"
-    if (selectedCategory !== "Highlight") {
-      filteredPosts = blogPosts.filter(post => post.category === selectedCategory);
+        return {
+          id: post.id,
+          title: post.title,
+          description: post.description,
+          content: post.content,
+          image: post.image,
+          category: categoryName,
+          author: 'Naiyana T.', // ตั้งค่าเริ่มต้น
+          date: post.date,
+          likes: post.likes_count || 0
+        };
+      }) || [];
+      
+      console.log("✅ [fetchPostsFromSupabase] ข้อมูลที่แปลงแล้ว:", transformedPosts);
+      return transformedPosts;
+      
+    } catch (error) {
+      console.error("💥 [fetchPostsFromSupabase] Error fetching posts from Supabase:", error);
+      return [];
     }
-    
-    // Pagination
-    const startIndex = (currentPage - 1) * limit;
-    const endIndex = startIndex + limit;
-    const paginatedPosts = filteredPosts.slice(startIndex, endIndex);
-    
-    return {
-      posts: paginatedPosts,
-      currentPage,
-      totalPages: Math.ceil(filteredPosts.length / limit),
-      hasMore: endIndex < filteredPosts.length
-    };
   };
 
-  // Handle page and category changes
-  useEffect(() => {
-    if (useFallbackData) {
-      console.log("🔄 Category/page changed, using fallback data");
-      const fallbackData = getFallbackPosts(page, 6, category);
-      if (page === 1) {
-        setPosts(fallbackData.posts);
-      } else {
-        setPosts((prevPosts) => [...prevPosts, ...fallbackData.posts]);
+  // ฟังก์ชันสำหรับดึงข้อมูลหมวดหมู่จาก Supabase
+  const fetchCategoriesFromSupabase = async () => {
+    try {
+      console.log("🔄 [fetchCategoriesFromSupabase] กำลังดึงข้อมูลหมวดหมู่จาก Supabase...");
+      
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('categories')
+        .select('id, name')
+        .order('name', { ascending: true });
+      
+      if (categoriesError) {
+        console.error("❌ [fetchCategoriesFromSupabase] Supabase categories error:", categoriesError);
+        throw categoriesError;
       }
-      setHasMore(fallbackData.hasMore);
-    } else {
-      // Try to fetch from Supabase
-      const fetchPosts = async () => {
-        setIsLoading(true);
+      
+      console.log("✅ [fetchCategoriesFromSupabase] ข้อมูลหมวดหมู่จาก Supabase:", categoriesData);
+      return categoriesData || [];
+      
+    } catch (error) {
+      console.error("💥 [fetchCategoriesFromSupabase] Error fetching categories from Supabase:", error);
+      return [];
+    }
+  };
+
+  useEffect(() => {
+    // ดึงข้อมูลหมวดหมู่เมื่อเริ่มต้น
+    if (isFirstTimeRender) {
+      const fetchCategories = async () => {
         try {
-          const result = await postsService.getPosts({
-            page,
-            limit: 6,
-            category: category !== "Highlight" ? category : null
-          });
+          console.log("🔄 [fetchCategories] กำลังดึงข้อมูลหมวดหมู่...");
           
-          if (result.error) throw result.error;
+          // ลองใช้ Supabase ก่อน
+          const supabaseCategories = await fetchCategoriesFromSupabase();
           
-          // Check if we have posts, if not switch to fallback
-          if (!result.data.posts || result.data.posts.length === 0) {
-            console.log("❌ No posts found in Supabase, switching to fallback");
-            setUseFallbackData(true);
-            const fallbackData = getFallbackPosts(page, 6, category);
-            if (page === 1) {
-              setPosts(fallbackData.posts);
-            } else {
-              setPosts((prevPosts) => [...prevPosts, ...fallbackData.posts]);
-            }
-            setHasMore(fallbackData.hasMore);
-            setApiError(true);
+          if (supabaseCategories.length > 0) {
+            console.log("✅ [fetchCategories] ใช้ข้อมูลจาก Supabase");
+            setCategories(supabaseCategories);
           } else {
-            if (page === 1) {
-              setPosts(result.data.posts);
-            } else {
-              setPosts((prevPosts) => [...prevPosts, ...result.data.posts]);
-            }
-            setHasMore(result.data.hasMore);
-            setApiError(false);
+            // ถ้า Supabase ไม่มีข้อมูล ลองใช้ backend API
+            console.log("🔄 [fetchCategories] Supabase ว่างเปล่า ลองใช้ backend API...");
+            const responseCategories = await categoriesAPI.getAll();
+            setCategories(responseCategories);
           }
+          
+          setIsFirstTimeRender(false);
         } catch (error) {
-          console.log("❌ Failed to fetch posts, switching to fallback");
-          setUseFallbackData(true);
-          const fallbackData = getFallbackPosts(page, 6, category);
-          if (page === 1) {
-            setPosts(fallbackData.posts);
-          } else {
-            setPosts((prevPosts) => [...prevPosts, ...fallbackData.posts]);
-          }
-          setHasMore(fallbackData.hasMore);
-          setApiError(true);
-        } finally {
-          setIsLoading(false);
+          console.log("❌ [fetchCategories] API error:", error);
+          // ใช้ข้อมูล fallback ถ้า API ล้มเหลว
+          const fallbackCategories = [
+            { id: 1, name: "Dev" },
+            { id: 2, name: "LifeStyle" },
+            { id: 3, name: "General" }
+          ];
+          setCategories(fallbackCategories);
+          setIsFirstTimeRender(false);
         }
       };
-      
-      fetchPosts();
+
+      fetchCategories();
     }
-  }, [page, category, useFallbackData]);
+  }, [isFirstTimeRender]);
+
+  useEffect(() => {
+    // ดึงข้อมูลโพสต์เมื่อหน้า หรือหมวดหมู่เปลี่ยน
+    const fetchPosts = async () => {
+      setIsLoading(true); // เริ่มโหลด
+      try {
+        console.log("🔄 [fetchPosts] กำลังดึงข้อมูลโพสต์...");
+        
+        // ลองใช้ Supabase ก่อน
+        const supabasePosts = await fetchPostsFromSupabase();
+        
+        if (supabasePosts.length > 0) {
+          console.log("✅ [fetchPosts] ใช้ข้อมูลจาก Supabase");
+          
+          // กรองตามหมวดหมู่ถ้าไม่ใช่ Highlight
+          let filteredPosts = supabasePosts;
+          if (category !== "Highlight") {
+            filteredPosts = supabasePosts.filter(post => 
+              post.category === category
+            );
+          }
+          
+          if (page === 1) {
+            setPosts(filteredPosts); // แทนที่โพสต์ในหน้าแรก
+          } else {
+            setPosts((prevPosts) => [...prevPosts, ...filteredPosts]); // เพิ่มโพสต์ในหน้าถัดไป
+          }
+          
+          // ตรวจสอบว่ามีโพสต์เพิ่มเติมหรือไม่
+          if (filteredPosts.length < 10) { // สมมติว่าแต่ละหน้าแสดง 10 โพสต์
+            setHasMore(false);
+          }
+        } else {
+          // ถ้า Supabase ไม่มีข้อมูล ลองใช้ backend API
+          console.log("🔄 [fetchPosts] Supabase ว่างเปล่า ลองใช้ backend API...");
+          const response = await postsAPI.getAll();
+          console.log("🔍 [fetchPosts] Backend API response:", response);
+          console.log("🔍 [fetchPosts] Response type:", typeof response);
+          console.log("🔍 [fetchPosts] Response keys:", response ? Object.keys(response) : "null");
+          console.log("🔍 [fetchPosts] Response.posts:", response?.posts);
+          console.log("🔍 [fetchPosts] Response is array:", Array.isArray(response));
+          
+          // ตรวจสอบว่า backend API มีข้อมูลหรือไม่
+          const backendPosts = response.posts || response;
+          if (backendPosts && backendPosts.length > 0) {
+            console.log("✅ [fetchPosts] ใช้ข้อมูลจาก Backend API");
+            if (page === 1) {
+              console.log("🔍 [fetchPosts] Setting posts (page 1):", backendPosts);
+              setPosts(backendPosts);
+            } else {
+              console.log("🔍 [fetchPosts] Adding posts (page > 1):", backendPosts);
+              setPosts((prevPosts) => [...prevPosts, ...backendPosts]);
+            }
+            if (response.currentPage >= response.totalPages) {
+              setHasMore(false);
+            }
+          } else {
+            console.log("❌ [fetchPosts] Backend API ว่างเปล่า ใช้ข้อมูล mock");
+            // ใช้ข้อมูล mock จาก blogPosts.js
+            setPosts(blogPosts);
+            setHasMore(false);
+          }
+        }
+        
+        setIsLoading(false);
+      } catch (error) {
+        console.log("❌ [fetchPosts] Posts API error:", error);
+        // ใช้ข้อมูล fallback ถ้า API ล้มเหลว
+        setPosts(blogPosts);
+        setIsLoading(false);
+      }
+    };
+
+    fetchPosts(); // เรียก fetchPosts เมื่อหน้า หรือหมวดหมู่เปลี่ยน
+  }, [page, category]); // Effect ขึ้นอยู่กับ page และ category
 
   useEffect(() => {
     if (searchKeyword.length > 0) {
@@ -190,35 +265,38 @@ export default function Articles() {
       
       const fetchSuggestions = async () => {
         try {
-          debugComponent("ArticlesSection", "Searching posts in Supabase");
-          const result = await postsService.getPosts({
-            keyword: searchKeyword,
-            limit: 10
-          });
+          console.log("🔄 [fetchSuggestions] กำลังค้นหาโพสต์...");
           
-          if (result.error) {
-            throw result.error;
+          // ลองใช้ Supabase ก่อน
+          const supabasePosts = await fetchPostsFromSupabase();
+          
+          if (supabasePosts.length > 0) {
+            console.log("✅ [fetchSuggestions] ใช้ข้อมูลจาก Supabase");
+            // กรองโพสต์ตามคำค้นหา
+            const filteredPosts = supabasePosts.filter(post => 
+              post.title.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+              post.description.toLowerCase().includes(searchKeyword.toLowerCase())
+            );
+            setSuggestions(filteredPosts);
+          } else {
+            // ถ้า Supabase ไม่มีข้อมูล ลองใช้ backend API
+            console.log("🔄 [fetchSuggestions] Supabase ว่างเปล่า ลองใช้ backend API...");
+            const response = await postsAPI.getAll();
+            setSuggestions(response.posts || response);
           }
           
-          setSuggestions(result.data.posts); // Set search suggestions
           setIsLoading(false);
         } catch (error) {
-          debugError(error, "fetchSuggestions");
-          debugComponent("ArticlesSection", "Using fallback search");
-          
-          // Fallback to local search
-          const filteredPosts = blogPosts.filter(post => 
-            post.title.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-            post.description.toLowerCase().includes(searchKeyword.toLowerCase())
-          );
-          setSuggestions(filteredPosts);
+          console.log("❌ [fetchSuggestions] Search API error:", error);
+          // ใช้ข้อมูล fallback สำหรับการค้นหา
+          setSuggestions(blogPosts);
           setIsLoading(false);
         }
       };
 
       fetchSuggestions();
     } else {
-      setSuggestions([]); // Clear suggestions if keyword is empty
+      setSuggestions([]); // ล้างคำแนะนำถ้าคำค้นหาว่าง
     }
   }, [searchKeyword, useFallbackData]);
 
@@ -367,36 +445,34 @@ export default function Articles() {
         )}
       </div>
       <article className="grid grid-cols-1 md:grid-cols-2 gap-8 px-4 md:px-0">
-        {console.log("🎯 Rendering posts:", { postsLength: posts.length, posts, isLoading, apiError, useFallbackData })}
-        {posts.length === 0 && !isLoading ? (
-          <div className="col-span-2 text-center py-8 text-gray-500">
-            <p>ไม่พบข้อมูลบทความ</p>
-            <p className="text-sm mt-2">API Error: {apiError ? 'Yes' : 'No'}, Using Fallback: {useFallbackData ? 'Yes' : 'No'}</p>
+        {console.log("🔍 [ArticlesSection] Posts to render:", posts)}
+        {console.log("🔍 [ArticlesSection] Posts length:", posts.length)}
+        {console.log("🔍 [ArticlesSection] Posts type:", typeof posts)}
+        {console.log("🔍 [ArticlesSection] Posts is array:", Array.isArray(posts))}
+        {posts.length === 0 ? (
+          <div className="col-span-2 text-center py-8">
+            <p className="text-muted-foreground">ไม่พบข้อมูลโพสต์</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              กำลังโหลดข้อมูลจาก Supabase และ Backend API...
+            </p>
           </div>
         ) : (
           posts.map((blog, index) => {
-            console.log(`📊 Blog ${index}:`, blog);
-            
-            // Find corresponding fallback data from blogPosts
-            const fallbackPost = blogPosts.find(post => post.id === blog.id);
-            
+            console.log("🔍 [ArticlesSection] Rendering blog:", blog);
             return (
               <BlogCard
                 key={index}
                 id={blog.id}
                 image={blog.image}
-                category={blog.categories?.name || 'General'}
+                category={blog.category}
                 title={blog.title}
                 description={blog.description}
-                author={blog.author || 'Unknown Author'}
+                author={blog.author}
                 date={new Date(blog.date).toLocaleDateString("en-GB", {
                   day: "numeric",
                   month: "long",
                   year: "numeric",
                 })}
-                debugInfo={blog}
-                fallbackData={fallbackPost}
-                apiError={apiError}
               />
             );
           })

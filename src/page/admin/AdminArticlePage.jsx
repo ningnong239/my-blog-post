@@ -32,6 +32,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { postsAPI, categoriesAPI } from "@/config/api";
 
 export default function AdminArticleManagementPage() {
   const navigate = useNavigate();
@@ -47,25 +48,13 @@ export default function AdminArticleManagementPage() {
     setIsLoading(true);
     const fetchPosts = async () => {
       try {
-        setIsLoading(true);
-        debugComponent("AdminArticlePage", "Fetching posts and categories");
-        
-        // Fetch posts
-        const postsResult = await postsService.getPosts({ page: 1, limit: 100 });
-        if (postsResult.error) {
-          throw postsResult.error;
-        }
-        setPosts(postsResult.data.posts || []);
-        setFilteredPosts(postsResult.data.posts || []);
-        
-        // Fetch categories
-        const categoriesResult = await categoriesService.getCategories();
-        if (categoriesResult.error) {
-          throw categoriesResult.error;
-        }
-        setCategories(categoriesResult.data || []);
-        
-        debugComponent("AdminArticlePage", "Data fetched successfully");
+        const response = await axios.get(
+          "https://myblogpostserver.vercel.app/posts/admin"
+        );
+        setPosts(response.data.posts);
+        setFilteredPosts(response.data.posts);
+        const responseCategories = await categoriesAPI.getAll();
+        setCategories(responseCategories);
       } catch (error) {
         debugError(error, "fetchPosts");
         console.error("Failed to fetch data:", error);
@@ -109,11 +98,7 @@ export default function AdminArticleManagementPage() {
   const handleDelete = async (postId) => {
     try {
       setIsLoading(true);
-      const result = await postsService.deletePost(postId);
-      
-      if (result.error) {
-        throw result.error;
-      }
+      await postsAPI.delete(postId);
       toast.custom((t) => (
         <div className="bg-green-500 text-white p-4 rounded-sm flex justify-between items-start">
           <div>

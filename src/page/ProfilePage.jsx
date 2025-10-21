@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/authentication";
 import { toast } from "sonner";
 import axios from "axios";
+import { profileAPI } from "@/config/api";
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -128,13 +129,7 @@ export default function ProfilePage() {
         formData.append("imageFile", imageFile);
       }
 
-      await axios.put(
-        "http://localhost:4001/profile",
-        formData,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-        }
-      );
+      await profileAPI.update(formData);
 
       toast.custom((t) => (
         <div className="bg-green-500 text-white p-4 rounded-sm flex justify-between items-start">

@@ -25,6 +25,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { categoriesAPI } from "@/config/api";
 
 export default function AdminCategoryManagementPage() {
   const navigate = useNavigate();
@@ -38,15 +39,8 @@ export default function AdminCategoryManagementPage() {
     const fetchCategories = async () => {
       try {
         setIsLoading(true);
-        debugComponent("AdminCategoryPage", "Fetching categories");
-        
-        const result = await categoriesService.getCategories();
-        if (result.error) {
-          throw result.error;
-        }
-        setCategories(result.data || []);
-        
-        debugComponent("AdminCategoryPage", "Categories fetched successfully");
+        const responseCategories = await categoriesAPI.getAll();
+        setCategories(responseCategories);
       } catch (error) {
         debugError(error, "fetchCategories");
         console.error("Error fetching categories data:", error);
@@ -69,11 +63,8 @@ export default function AdminCategoryManagementPage() {
   const handleDelete = async (categoryId) => {
     try {
       setIsLoading(true);
-      const result = await categoriesService.deleteCategory(categoryId);
-      
-      if (result.error) {
-        throw result.error;
-      }
+      await categoriesAPI.delete(categoryId);
+      await categoriesAPI.delete(categoryId);
       toast.custom((t) => (
         <div className="bg-green-500 text-white p-4 rounded-sm flex justify-between items-start">
           <div>
