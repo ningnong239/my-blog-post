@@ -49,7 +49,7 @@ export default function AdminArticleManagementPage() {
     const fetchPosts = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:4001/posts/admin"
+          "https://myblogpostserver.vercel.app/posts/admin"
         );
         setPosts(response.data.posts);
         setFilteredPosts(response.data.posts);
