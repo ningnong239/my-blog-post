@@ -26,13 +26,12 @@ import AuthenticationRoute from "./components/auth/AuthenticationRoute";
 
 jwtInterceptor();
 
-function App() {
+function AppContent() {
   const { isAuthenticated, state } = useAuth();
 
   return (
-    <AuthProvider>
-      <div className="App">
-        <Routes>
+    <div className="App">
+      <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/post/:postId" element={<ViewPostPage />} />
         <Route path="*" element={<NotFoundPage />} />
@@ -228,6 +227,13 @@ function App() {
           }}
         />
       </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
     </AuthProvider>
   );
 }

@@ -31,6 +31,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { postsAPI, categoriesAPI } from "@/config/api";
 
 export default function AdminArticleManagementPage() {
   const navigate = useNavigate();
@@ -51,10 +52,8 @@ export default function AdminArticleManagementPage() {
         );
         setPosts(response.data.posts);
         setFilteredPosts(response.data.posts);
-        const responseCategories = await axios.get(
-          "http://localhost:4001/categories"
-        );
-        setCategories(responseCategories.data);
+        const responseCategories = await categoriesAPI.getAll();
+        setCategories(responseCategories);
       } catch (error) {
         console.error(error);
       } finally {
@@ -97,9 +96,7 @@ export default function AdminArticleManagementPage() {
   const handleDelete = async (postId) => {
     try {
       setIsLoading(true);
-      await axios.delete(
-        `http://localhost:4001/posts/${postId}`
-      );
+      await postsAPI.delete(postId);
       toast.custom((t) => (
         <div className="bg-green-500 text-white p-4 rounded-sm flex justify-between items-start">
           <div>

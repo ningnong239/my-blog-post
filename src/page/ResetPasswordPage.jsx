@@ -16,6 +16,7 @@ import {
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/authentication";
 import axios from "axios";
+import { authAPI } from "@/config/api";
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate();
@@ -52,13 +53,10 @@ export default function ResetPasswordPage() {
     try {
       setIsDialogOpen(false);
 
-      const response = await axios.put(
-        `http://localhost:4001/auth/reset-password`,
-        {
-          oldPassword: password,
-          newPassword: newPassword,
-        }
-      );
+      const response = await authAPI.resetPassword({
+        oldPassword: password,
+        newPassword: newPassword,
+      });
 
       if (response.status === 200) {
         toast.custom((t) => (

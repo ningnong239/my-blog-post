@@ -23,6 +23,8 @@ import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/authentication";
+import { postsAPI } from "@/config/api";
+import { blogPosts } from "../data/blogPosts";
 
 export default function ViewPost() {
   const [img, setImg] = useState("");
@@ -49,28 +51,35 @@ export default function ViewPost() {
   const getPost = async () => {
     setIsLoading(true);
     try {
-      const postsResponse = await axios.get(
-        `http://localhost:4001/posts/${param.postId}`
-      );
-      setImg(postsResponse.data.image);
-      setTitle(postsResponse.data.title);
-      setDate(postsResponse.data.date);
-      setDescription(postsResponse.data.description);
-      setCategory(postsResponse.data.category);
-      setContent(postsResponse.data.content);
+      const postsResponse = await postsAPI.getById(param.postId);
+      setImg(postsResponse.image);
+      setTitle(postsResponse.title);
+      setDate(postsResponse.date);
+      setDescription(postsResponse.description);
+      setCategory(postsResponse.category);
+      setContent(postsResponse.content);
       const likesResponse = await axios.get(
-        `http://localhost:4001/posts/${param.postId}/likes`
+        `https://myblogpostserver.vercel.app/posts/${param.postId}/likes`
       );
       setLikes(likesResponse.data.like_count);
       const commentsResponse = await axios.get(
-        `http://localhost:4001/posts/${param.postId}/comments`
+        `https://myblogpostserver.vercel.app/posts/${param.postId}/comments`
       );
       setComments(commentsResponse.data);
       setIsLoading(false);
     } catch (error) {
-      console.log(error);
+      console.log("Post API error:", error);
+      // Use fallback post from mock data if API fails
+      const fallbackPost = blogPosts.find(post => post.id === parseInt(param.postId)) || blogPosts[0];
+      setImg(fallbackPost.image);
+      setTitle(fallbackPost.title);
+      setDate(fallbackPost.date);
+      setDescription(fallbackPost.description);
+      setCategory(fallbackPost.category);
+      setContent(fallbackPost.content);
+      setLikes(fallbackPost.likes || 0);
+      setComments([]); // No comments for fallback data
       setIsLoading(false);
-      navigate("*");
     }
   };
 
@@ -155,13 +164,13 @@ function Share({ likesAmount, setDialogState, user, setLikes }) {
       // First try to like the post
       try {
         await axios.post(
-          `http://localhost:4001/posts/${param.postId}/likes`
+          `https://myblogpostserver.vercel.app/posts/${param.postId}/likes`
         );
       } catch (error) {
         // If we get a 500 error, assume the post is already liked and try to unlike
         if (error.response?.status === 500) {
           await axios.delete(
-            `http://localhost:4001/posts/${param.postId}/likes`
+            `https://myblogpostserver.vercel.app/posts/${param.postId}/likes`
           );
         } else {
           // If it's a different error, throw it to be caught by the outer try-catch
@@ -171,7 +180,7 @@ function Share({ likesAmount, setDialogState, user, setLikes }) {
 
       // After either liking or unliking, get the updated like count
       const likesResponse = await axios.get(
-        `http://localhost:4001/posts/${param.postId}/likes`
+        `https://myblogpostserver.vercel.app/posts/${param.postId}/likes`
       );
       setLikes(likesResponse.data.like_count);
     } catch (error) {
@@ -266,11 +275,11 @@ function Comment({ setDialogState, commentList, setComments, user }) {
       setIsError(false);
       setCommentText("");
       await axios.post(
-        `http://localhost:4001/posts/${param.postId}/comments`,
+        `https://myblogpostserver.vercel.app/posts/${param.postId}/comments`,
         { comment: commentText }
       );
       const commentsResponse = await axios.get(
-        `http://localhost:4001/posts/${param.postId}/comments`
+        `https://myblogpostserver.vercel.app/posts/${param.postId}/comments`
       );
       setComments(commentsResponse.data);
       toast.custom((t) => (
@@ -379,20 +388,20 @@ function AuthorBio() {
         </div>
         <div>
           <p className="text-sm">Author</p>
-          <h3 className="text-2xl font-bold">Thompson P.</h3>
+          <h3 className="text-2xl font-bold">Naiyana T.</h3>
         </div>
       </div>
       <hr className="border-gray-300 mb-4" />
       <div className="text-muted-foreground space-y-4">
-        <p>
-          I am a pet enthusiast and freelance writer who specializes in animal
-          behavior and care. With a deep love for cats, I enjoy sharing insights
-          on feline companionship and wellness.
+      <p>
+        👨‍💻 I'm a developer who loves coding, cooking, and creativity.<br /><br />
+          🍳 When I'm not debugging, you'll probably find me experimenting in the kitchen.<br /><br />
+          🎬 Movies and games are my favorite ways to unwind and get inspired.
         </p>
         <p>
-          When I&apos;m not writing, I spend time volunteering at my local
-          animal shelter, helping cats find loving homes.
+        When I'm not coding, I love cooking, watching movies, and playing games.
         </p>
+
       </div>
     </div>
   );
@@ -407,7 +416,7 @@ function CreateAccountModal({ dialogState, setDialogState }) {
           Create an account to continue
         </AlertDialogTitle>
         <button
-          onClick={() => navigate("/signup")}
+          onClick={() => navigate("/sign-up")}
           className="rounded-full text-white bg-foreground hover:bg-muted-foreground transition-colors py-4 text-lg w-52"
         >
           Create account

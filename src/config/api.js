@@ -1,5 +1,5 @@
 // API Configuration
-const API_BASE_URL = 'https://myblogpostserver.vercel.app';
+export const API_BASE_URL = 'http://localhost:4001';
 
 // API Endpoints
 export const API_ENDPOINTS = {
@@ -25,6 +25,9 @@ export const API_ENDPOINTS = {
 
 // API Helper Functions
 export const apiRequest = async (url, options = {}) => {
+  console.log("🔍 [apiRequest] URL:", url);
+  console.log("📦 [apiRequest] Options:", options);
+
   const defaultOptions = {
     headers: {
       'Content-Type': 'application/json',
@@ -36,6 +39,9 @@ export const apiRequest = async (url, options = {}) => {
   const token = localStorage.getItem('token');
   if (token) {
     defaultOptions.headers.Authorization = `Bearer ${token}`;
+    console.log("🔑 [apiRequest] Token found:", token.substring(0, 20) + "...");
+  } else {
+    console.log("❌ [apiRequest] No token found");
   }
 
   const config = {
@@ -48,20 +54,20 @@ export const apiRequest = async (url, options = {}) => {
   };
 
   try {
-    console.log('Making API request to:', url);
-    console.log('Request config:', config);
-    console.log('Request body:', config.body);
+    console.log('🚀 [apiRequest] Making API request to:', url);
+    console.log('⚙️ [apiRequest] Request config:', config);
+    console.log('📝 [apiRequest] Request body:', config.body);
     
     const response = await fetch(url, config);
-    console.log('Response status:', response.status);
-    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+    console.log('📡 [apiRequest] Response status:', response.status);
+    console.log('📋 [apiRequest] Response headers:', Object.fromEntries(response.headers.entries()));
     
     const data = await response.json();
-    console.log('Response data:', data);
+    console.log('📨 [apiRequest] Response data:', data);
 
     if (!response.ok) {
-      console.error('API Error Response:', data);
-      console.error('Full error details:', {
+      console.error('❌ [apiRequest] API Error Response:', data);
+      console.error('🔍 [apiRequest] Full error details:', {
         status: response.status,
         statusText: response.statusText,
         url: url,
@@ -70,10 +76,10 @@ export const apiRequest = async (url, options = {}) => {
       throw new Error(data.error || `HTTP error! status: ${response.status}`);
     }
 
-    console.log('API request successful');
+    console.log('✅ [apiRequest] API request successful');
     return data;
   } catch (error) {
-    console.error('API Request Error:', error);
+    console.error('💥 [apiRequest] API Request Error:', error);
     throw error;
   }
 };
@@ -82,6 +88,7 @@ export const apiRequest = async (url, options = {}) => {
 export const authAPI = {
   // Register user
   register: async (userData) => {
+    console.log("📝 [authAPI.register] User data:", userData);
     return apiRequest(API_ENDPOINTS.REGISTER, {
       method: 'POST',
       body: JSON.stringify(userData),
@@ -90,6 +97,8 @@ export const authAPI = {
 
   // Login user
   login: async (email, password) => {
+    console.log("🔐 [authAPI.login] Email:", email);
+    console.log("🔐 [authAPI.login] Password:", password);
     return apiRequest(API_ENDPOINTS.LOGIN, {
       method: 'POST',
       body: JSON.stringify({ email, password }),
@@ -98,6 +107,7 @@ export const authAPI = {
 
   // Get user info
   getUser: async () => {
+    console.log("👤 [authAPI.getUser] Fetching user data...");
     return apiRequest(API_ENDPOINTS.GET_USER, {
       method: 'GET',
     });
@@ -105,16 +115,18 @@ export const authAPI = {
 
   // Logout user
   logout: async () => {
+    console.log("🚪 [authAPI.logout] Logging out user...");
     return apiRequest(API_ENDPOINTS.LOGOUT, {
       method: 'POST',
     });
   },
 
   // Reset password
-  resetPassword: async (email) => {
+  resetPassword: async (passwordData) => {
+    console.log("🔄 [authAPI.resetPassword] Password data:", passwordData);
     return apiRequest(API_ENDPOINTS.RESET_PASSWORD, {
-      method: 'POST',
-      body: JSON.stringify({ email }),
+      method: 'PUT',
+      body: JSON.stringify(passwordData),
     });
   },
 };
@@ -137,18 +149,80 @@ export const postsAPI = {
 
   // Create post (Admin only)
   create: async (postData) => {
-    return apiRequest(API_ENDPOINTS.POSTS, {
+    const token = localStorage.getItem('token');
+    const config = {
       method: 'POST',
-      body: JSON.stringify(postData),
-    });
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: postData,
+    };
+
+    try {
+      console.log('Making API request to:', API_ENDPOINTS.POSTS);
+      console.log('Request config:', config);
+      
+      const response = await fetch(API_ENDPOINTS.POSTS, config);
+      console.log('Response status:', response.status);
+      
+      const data = await response.json();
+      console.log('Response data:', data);
+
+      if (!response.ok) {
+        console.error('API Error Response:', data);
+        throw new Error(data.error || `HTTP error! status: ${response.status}`);
+      }
+
+      console.log('API request successful');
+      return data;
+    } catch (error) {
+      console.error('API Request Error:', error);
+      throw error;
+    }
   },
 
   // Update post (Admin only)
   update: async (id, postData) => {
-    return apiRequest(API_ENDPOINTS.POST_BY_ID(id), {
-      method: 'PUT',
-      body: JSON.stringify(postData),
-    });
+    const token = localStorage.getItem('token');
+    
+    // Check if postData is FormData
+    if (postData instanceof FormData) {
+      const config = {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: postData,
+      };
+
+      try {
+        console.log('Making API request to:', API_ENDPOINTS.POST_BY_ID(id));
+        console.log('Request config:', config);
+        
+        const response = await fetch(API_ENDPOINTS.POST_BY_ID(id), config);
+        console.log('Response status:', response.status);
+        
+        const data = await response.json();
+        console.log('Response data:', data);
+
+        if (!response.ok) {
+          console.error('API Error Response:', data);
+          throw new Error(data.error || `HTTP error! status: ${response.status}`);
+        }
+
+        console.log('API request successful');
+        return data;
+      } catch (error) {
+        console.error('API Request Error:', error);
+        throw error;
+      }
+    } else {
+      // For JSON data, use the regular apiRequest function
+      return apiRequest(API_ENDPOINTS.POST_BY_ID(id), {
+        method: 'PUT',
+        body: JSON.stringify(postData),
+      });
+    }
   },
 
   // Delete post (Admin only)
@@ -203,10 +277,46 @@ export const categoriesAPI = {
 export const profileAPI = {
   // Update profile (User only)
   update: async (profileData) => {
-    return apiRequest(API_ENDPOINTS.PROFILE, {
-      method: 'PUT',
-      body: JSON.stringify(profileData),
-    });
+    const token = localStorage.getItem('token');
+    
+    // Check if profileData is FormData
+    if (profileData instanceof FormData) {
+      const config = {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: profileData,
+      };
+
+      try {
+        console.log('Making API request to:', API_ENDPOINTS.PROFILE);
+        console.log('Request config:', config);
+        
+        const response = await fetch(API_ENDPOINTS.PROFILE, config);
+        console.log('Response status:', response.status);
+        
+        const data = await response.json();
+        console.log('Response data:', data);
+
+        if (!response.ok) {
+          console.error('API Error Response:', data);
+          throw new Error(data.error || `HTTP error! status: ${response.status}`);
+        }
+
+        console.log('API request successful');
+        return data;
+      } catch (error) {
+        console.error('API Request Error:', error);
+        throw error;
+      }
+    } else {
+      // For JSON data, use the regular apiRequest function
+      return apiRequest(API_ENDPOINTS.PROFILE, {
+        method: 'PUT',
+        body: JSON.stringify(profileData),
+      });
+    }
   },
 
   // Upload avatar (User only)

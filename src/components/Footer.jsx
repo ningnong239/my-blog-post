@@ -10,15 +10,15 @@ export function Footer() {
       <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6">
         <span className="font-medium text-white">Get in touch</span>
         <div className="flex space-x-4">
-          <a href="#" className="hover:text-[#F59E42] text-white">
+          <a href="https://www.linkedin.com/" target="_blank" rel="noopener noreferrer" className="hover:text-[#F59E42] text-white">
             <Linkedin size={24} />
             <span className="sr-only">LinkedIn</span>
           </a>
-          <a href="#" className="hover:text-[#F59E42] text-white">
+          <a href="https://github.com/" target="_blank" rel="noopener noreferrer" className="hover:text-[#F59E42] text-white">
             <Github size={24} />
             <span className="sr-only">GitHub</span>
           </a>
-          <a href="#" className="hover:text-[#F59E42] text-white">
+          <a href="https://mail.google.com/" target="_blank" rel="noopener noreferrer" className="hover:text-[#F59E42] text-white">
             <Mail size={24} />
             <span className="sr-only">Email</span>
           </a>

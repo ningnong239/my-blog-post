@@ -39,6 +39,8 @@ export default function LoginPage() {
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log("🧾 [handleSubmit] Email:", formValues.email);
+    console.log("🧾 [handleSubmit] Password:", formValues.password);
     console.log("=== LOGIN PAGE SUBMIT START ===");
     console.log("Form values:", formValues);
     
@@ -47,15 +49,15 @@ export default function LoginPage() {
     setFormErrors(errors);
 
     if (Object.keys(errors).length === 0) {
-      console.log("No validation errors, attempting login...");
-      console.log("Login attempt with:", formValues);
+      console.log("✅ [handleSubmit] No validation errors, attempting login...");
+      console.log("🚀 [handleSubmit] Login attempt with:", formValues);
       
       try {
         const result = await login(formValues);
-        console.log("Login result:", result);
+        console.log("📨 [handleSubmit] Login result:", result);
         
         if (result?.error) {
-          console.log("Login error:", result.error);
+          console.log("❌ [handleSubmit] Login error:", result.error);
           return toast.custom((t) => (
             <div className="bg-red-500 text-white p-4 rounded-sm flex justify-between items-start">
               <div>
@@ -71,13 +73,13 @@ export default function LoginPage() {
             </div>
           ));
         }
-        console.log("=== LOGIN PAGE SUCCESS ===");
+        console.log("🎉 [handleSubmit] === LOGIN PAGE SUCCESS ===");
       } catch (error) {
-        console.log("=== LOGIN PAGE ERROR ===");
-        console.log("Login page error:", error);
+        console.log("💥 [handleSubmit] === LOGIN PAGE ERROR ===");
+        console.log("💥 [handleSubmit] Login page error:", error);
       }
     } else {
-      console.log("Validation errors found, not attempting login");
+      console.log("⚠️ [handleSubmit] Validation errors found, not attempting login");
     }
   };
 

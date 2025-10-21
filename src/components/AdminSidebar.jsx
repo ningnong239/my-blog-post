@@ -20,9 +20,13 @@ export function AdminSidebar() {
   return (
     <aside className="w-64 bg-white shadow-md">
       <div className="p-4">
-        <h1 className="text-2xl font-bold">
-          Thomson P<span className="text-green-400">.</span>
-        </h1>
+        <div className="flex items-center mb-2">
+          <img
+            src="/ning.jpg"
+            alt="Logo"
+            className="w-10 h-10 rounded-full mr-3 object-cover"
+          />
+        </div>
         <p className="text-sm text-orange-400">Admin panel</p>
       </div>
       <nav className="mt-6">
