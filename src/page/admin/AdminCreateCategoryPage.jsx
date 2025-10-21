@@ -6,6 +6,7 @@ import axios from "axios";
 import { toast } from "sonner";
 import { X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { categoriesAPI } from "@/config/api";
 
 export default function AdminCreateCategoryPage() {
   const navigate = useNavigate();
@@ -24,12 +25,9 @@ export default function AdminCreateCategoryPage() {
 
     try {
       // Send POST request to create the category
-      await axios.post(
-        "http://localhost:4001/categories",
-        {
-          name: categoryName,
-        }
-      );
+      await categoriesAPI.create({
+        name: categoryName,
+      });
 
       // Show success toast
       toast.custom((t) => (

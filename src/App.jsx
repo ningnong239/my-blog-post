@@ -30,14 +30,11 @@ import "./utils/debugSignup"; // Import signup debug utilities
 
 jwtInterceptor();
 
-function App() {
+function AppContent() {
   const { isAuthenticated, state } = useAuth();
 
   return (
     <div className="App">
-
-
-
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/post/:postId" element={<ViewPostPage />} />
@@ -238,12 +235,20 @@ function App() {
         />
       </Routes>
 
-      <Toaster
-        toastOptions={{
-          unstyled: true,
-        }}
-      />
-    </div>
+        <Toaster
+          toastOptions={{
+            unstyled: true,
+          }}
+        />
+      </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 

@@ -17,6 +17,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { categoriesAPI } from "@/config/api";
 
 export default function AdminEditCategoryPage() {
   const navigate = useNavigate();
@@ -31,10 +32,8 @@ export default function AdminEditCategoryPage() {
     const fetchCategory = async () => {
       try {
         setIsLoading(true);
-        const response = await axios.get(
-          `http://localhost:4001/categories/${categoryId}`
-        );
-        setCategoryName(response.data.name); // Set the category name
+        const response = await categoriesAPI.getById(categoryId);
+        setCategoryName(response.name); // Set the category name
       } catch {
         toast.custom((t) => (
           <div className="bg-red-500 text-white p-4 rounded-sm flex justify-between items-start">
@@ -70,12 +69,9 @@ export default function AdminEditCategoryPage() {
     setIsSaving(true);
 
     try {
-      await axios.put(
-        `http://localhost:4001/categories/${categoryId}`,
-        {
-          name: categoryName,
-        }
-      );
+      await categoriesAPI.update(categoryId, {
+        name: categoryName,
+      });
 
       toast.custom((t) => (
         <div className="bg-green-500 text-white p-4 rounded-sm flex justify-between items-start">
@@ -125,9 +121,7 @@ export default function AdminEditCategoryPage() {
   const handleDelete = async () => {
     try {
       navigate("/admin/category-management");
-      await axios.delete(
-        `http://localhost:4001/categories/${categoryId}`
-      );
+      await categoriesAPI.delete(categoryId);
 
       toast.custom((t) => (
         <div className="bg-green-500 text-white p-4 rounded-sm flex justify-between items-start">

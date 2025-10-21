@@ -16,6 +16,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { categoriesAPI, postsAPI } from "@/config/api";
 
 export default function AdminCreateArticlePage() {
   const { state } = useAuth();
@@ -38,10 +39,8 @@ export default function AdminCreateArticlePage() {
     const fetchCategories = async () => {
       try {
         setIsLoading(true);
-        const responseCategories = await axios.get(
-          "http://localhost:4001/categories"
-        );
-        setCategories(responseCategories.data);
+        const responseCategories = await categoriesAPI.getAll();
+        setCategories(responseCategories);
       } catch (error) {
         console.error("Error fetching categories data:", error);
         navigate("*");
@@ -82,13 +81,7 @@ export default function AdminCreateArticlePage() {
     formData.append("imageFile", imageFile.file);
 
     try {
-      await axios.post(
-        "http://localhost:4001/posts",
-        formData,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-        }
-      );
+      await postsAPI.create(formData);
 
       toast.custom((t) => (
         <div className="bg-green-500 text-white p-4 rounded-sm flex justify-between items-start">

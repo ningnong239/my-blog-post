@@ -25,6 +25,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { postsAPI, categoriesAPI } from "@/config/api";
 
 //this component is not finished yet
 export default function AdminEditArticlePage() {
@@ -54,12 +55,10 @@ export default function AdminEditArticlePage() {
     const fetchPost = async () => {
       try {
         setIsLoading(true);
-        const responseCategories = await axios.get(
-          "http://localhost:4001/categories"
-        );
-        setCategories(responseCategories.data);
+        const responseCategories = await categoriesAPI.getAll();
+        setCategories(responseCategories);
         const response = await axios.get(
-          `http://localhost:4001/posts/admin/${postId}`
+          `https://myblogpostserver.vercel.app/posts/admin/${postId}`
         );
         setPost(response.data);
       } catch {
@@ -119,26 +118,17 @@ export default function AdminEditArticlePage() {
         formData.append("status_id", postStatusId);
         formData.append("imageFile", imageFile.file);
 
-        await axios.put(
-          `http://localhost:4001/posts/${postId}`,
-          formData,
-          {
-            headers: { "Content-Type": "multipart/form-data" },
-          }
-        );
+        await postsAPI.update(postId, formData);
       } else {
         // If the image is not changed, use the old method
-        await axios.put(
-          `http://localhost:4001/posts/${postId}`,
-          {
-            title: post.title,
-            image: post.image, // Existing image URL
-            category_id: post.category_id,
-            description: post.description,
-            content: post.content,
-            status_id: postStatusId,
-          }
-        );
+        await postsAPI.update(postId, {
+          title: post.title,
+          image: post.image, // Existing image URL
+          category_id: post.category_id,
+          description: post.description,
+          content: post.content,
+          status_id: postStatusId,
+        });
       }
 
       // Success toast
@@ -192,9 +182,7 @@ export default function AdminEditArticlePage() {
   const handleDelete = async (postId) => {
     try {
       navigate("/admin/article-management");
-      await axios.delete(
-        `http://localhost:4001/posts/${postId}`
-      );
+      await postsAPI.delete(postId);
       toast.custom((t) => (
         <div className="bg-green-500 text-white p-4 rounded-sm flex justify-between items-start">
           <div>
