@@ -11,14 +11,8 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  // ใช้ default build configuration ของ Vite
   build: {
-    // เพิ่มขนาด limit เป็น 1000 kB
     chunkSizeWarningLimit: 1000,
-    // ใช้ esbuild แทน terser (default ของ Vite)
-    minify: 'esbuild',
-    // ลบ console.log ใน production
-    esbuild: {
-      drop: ['console', 'debugger'],
-    },
   },
 });
