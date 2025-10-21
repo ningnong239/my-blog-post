@@ -43,8 +43,8 @@ export function NavBar() {
         style={{ minWidth: 0 }}
       >
         <img
-          src={logoImage}
-          alt="Logo"
+          src={require("../assets/NT.png")}
+          alt="Logo NT"
           className="h-10 w-10 object-cover rounded-full shadow-lg shadow-indigo-200"
           style={{ minWidth: 40, minHeight: 40 }}
         />

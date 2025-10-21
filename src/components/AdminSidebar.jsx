@@ -22,7 +22,7 @@ export function AdminSidebar() {
       <div className="p-4">
         <div className="flex items-center mb-2">
           <img
-            src="/ning.jpg"
+            src="/NT.png"
             alt="Logo"
             className="w-10 h-10 rounded-full mr-3 object-cover"
           />
