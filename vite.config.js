@@ -11,4 +11,22 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // แยก vendor libraries
+          vendor: ['react', 'react-dom'],
+          // แยก Supabase
+          supabase: ['@supabase/supabase-js'],
+          // แยก UI components
+          ui: ['lucide-react'],
+          // แยก router
+          router: ['react-router-dom'],
+        },
+      },
+    },
+    // เพิ่มขนาด limit เป็น 1000 kB
+    chunkSizeWarningLimit: 1000,
+  },
 });
