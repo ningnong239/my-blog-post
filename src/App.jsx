@@ -39,8 +39,9 @@ function AppContent() {
         <Route path="/" element={<HomePage />} />
         <Route path="/post/:postId" element={<ViewPostPage />} />
         <Route path="/admin" element={<AdminProfilePage />} />
-        <Route path="/admin/articles" element={<AdminArticlePage />} />
-        <Route path="/admin/categories" element={<AdminCategoryPage />} />
+        <Route path="/admin/profile" element={<AdminProfilePage />} />
+        <Route path="/admin/article-management" element={<AdminArticlePage />} />
+        <Route path="/admin/category-management" element={<AdminCategoryPage />} />
         <Route path="/admin/create-article" element={<AdminCreateArticle />} />
         <Route path="/admin/create-category" element={<AdminCreateCategoryPage />} />
         <Route path="/admin/edit-article/:id" element={<AdminEditArticlePage />} />
