@@ -109,6 +109,27 @@ export default function SignUpPage() {
         // Registration successful, navigate to success page
         navigate("/signup-success");
       }
+    } else {
+      console.log("⚠️ [SignUpPage] Validation errors found, not attempting registration");
+      // Show validation error toast
+      toast.custom((t) => (
+        <div className="bg-yellow-500 text-white p-4 rounded-sm flex justify-between items-start">
+          <div>
+            <h2 className="font-bold text-lg mb-1">Please fix the following errors:</h2>
+            <ul className="text-sm list-disc list-inside">
+              {Object.values(errors).map((error, index) => (
+                <li key={index}>{error}</li>
+              ))}
+            </ul>
+          </div>
+          <button
+            onClick={() => toast.dismiss(t)}
+            className="text-white hover:text-gray-200"
+          >
+            <X size={20} />
+          </button>
+        </div>
+      ));
     }
   };
 
