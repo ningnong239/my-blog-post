@@ -14,13 +14,11 @@ export default defineConfig({
   build: {
     // เพิ่มขนาด limit เป็น 1000 kB
     chunkSizeWarningLimit: 1000,
-    // ลดขนาด bundle โดยการ minify
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true, // ลบ console.log ใน production
-        drop_debugger: true, // ลบ debugger ใน production
-      },
+    // ใช้ esbuild แทน terser (default ของ Vite)
+    minify: 'esbuild',
+    // ลบ console.log ใน production
+    esbuild: {
+      drop: ['console', 'debugger'],
     },
   },
 });
