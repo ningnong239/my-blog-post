@@ -4,8 +4,21 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { authAPI } from "../config/api";
 import { supabase } from "../lib/supabase";
+import { debugComponent } from "../utils/debug";
 
-const AuthContext = React.createContext();
+const AuthContext = React.createContext({
+  isAuthenticated: false,
+  state: {
+    loading: false,
+    getUserLoading: false,
+    error: null,
+    user: null,
+  },
+  login: () => {},
+  register: () => {},
+  logout: () => {},
+  fetchUser: () => {},
+});
 
 function AuthProvider(props) {
   const [state, setState] = useState({
@@ -104,6 +117,8 @@ function AuthProvider(props) {
       
       console.log("🔄 [login] Attempting direct Supabase login...");
       console.log("📤 [login] Login data:", data);
+      console.log("🔧 [login] Supabase client:", supabase);
+      console.log("🔧 [login] Supabase URL:", supabase.supabaseUrl);
       
       // Use Supabase auth directly
       const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
@@ -186,7 +201,7 @@ function AuthProvider(props) {
       console.log("User created with ID:", registerData.user?.id);
       
       setState((prevState) => ({ ...prevState, loading: false, error: null }));
-      navigate("/sign-up/success");
+      navigate("/signup-success");
       return; // Success
       
     } catch (error) {

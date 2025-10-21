@@ -52,6 +52,7 @@ export default function LoginPage() {
       console.log("🚀 [handleSubmit] Login attempt with:", formValues);
       
       try {
+        console.log("🚀 [handleSubmit] Calling login function with:", formValues);
         const result = await login(formValues);
         console.log("📨 [handleSubmit] Login result:", result);
         

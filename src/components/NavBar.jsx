@@ -73,7 +73,7 @@ export function NavBar() {
             Log in
           </button>
           <button
-            onClick={() => navigate("/sign-up")}
+            onClick={() => navigate("/signup")}
             className="px-8 py-2 bg-[#F59E42] text-[#1E293B] rounded-full hover:bg-[#FDE68A] hover:text-[#1E293B] transition-colors font-semibold shadow-md"
           >
             Sign up
@@ -173,7 +173,7 @@ export function NavBar() {
                 Log in
               </button>
               <button
-                onClick={() => navigate("/sign-up")}
+                onClick={() => navigate("/signup")}
                 className="px-8 py-4 bg-[#F59E42] text-center text-[#1E293B] rounded-full hover:bg-[#FDE68A] hover:text-[#1E293B] transition-colors font-semibold shadow"
               >
                 Sign up
