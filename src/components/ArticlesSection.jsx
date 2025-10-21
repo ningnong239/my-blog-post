@@ -79,14 +79,17 @@ export default function Articles() {
       console.log("✅ [fetchPostsFromSupabase] ข้อมูลโพสต์จาก Supabase:", postsData);
       
       // แปลงข้อมูลให้ตรงกับรูปแบบที่ BlogCard ต้องการ
-      const transformedPosts = postsData?.map((post, index) => {
-        // กำหนดหมวดหมู่ตาม index (ชั่วคราว)
+      const transformedPosts = postsData?.map((post) => {
+        console.log("🔍 [fetchPostsFromSupabase] Post category_id:", post.category_id, "for post:", post.title);
+        
+        // ใช้ category_id เพื่อ map กับ category name
         let categoryName = 'General';
-        if (index === 0) categoryName = 'Dev';
-        else if (index === 1) categoryName = 'Liftstyle';
-        else if (index === 2) categoryName = 'General';
-        else if (index === 3) categoryName = 'Liftstyle';
+        if (post.category_id === 1) categoryName = 'Dev';
+        else if (post.category_id === 2) categoryName = 'LifeStyle';
+        else if (post.category_id === 3) categoryName = 'General';
         else categoryName = 'General';
+        
+        console.log("🔍 [fetchPostsFromSupabase] Mapped category:", categoryName, "for post:", post.title);
         
         return {
           id: post.id,
@@ -188,9 +191,15 @@ export default function Articles() {
           // กรองตามหมวดหมู่ถ้าไม่ใช่ Highlight
           let filteredPosts = supabasePosts;
           if (category !== "Highlight") {
+            console.log(`🔍 [fetchPosts] กำลังกรองตามหมวดหมู่ ${category}...`);
+            console.log(`🔍 [fetchPosts] โพสต์ทั้งหมดก่อนกรอง:`, supabasePosts.map(p => ({ title: p.title, category: p.category })));
+            
             filteredPosts = supabasePosts.filter(post => 
               post.category === category
             );
+            console.log(`🔍 [fetchPosts] กรองตามหมวดหมู่ ${category}:`, filteredPosts.map(p => ({ title: p.title, category: p.category })));
+          } else {
+            console.log("🔍 [fetchPosts] แสดงครบทุกโพสต์ (Highlight):", filteredPosts);
           }
           
           if (page === 1) {
@@ -217,12 +226,24 @@ export default function Articles() {
           const backendPosts = response.posts || response;
           if (backendPosts && backendPosts.length > 0) {
             console.log("✅ [fetchPosts] ใช้ข้อมูลจาก Backend API");
-            if (page === 1) {
-              console.log("🔍 [fetchPosts] Setting posts (page 1):", backendPosts);
-              setPosts(backendPosts);
+            
+            // กรองตามหมวดหมู่ถ้าไม่ใช่ Highlight
+            let filteredBackendPosts = backendPosts;
+            if (category !== "Highlight") {
+              filteredBackendPosts = backendPosts.filter(post => 
+                post.category === category
+              );
+              console.log(`🔍 [fetchPosts] กรอง Backend API ตามหมวดหมู่ ${category}:`, filteredBackendPosts);
             } else {
-              console.log("🔍 [fetchPosts] Adding posts (page > 1):", backendPosts);
-              setPosts((prevPosts) => [...prevPosts, ...backendPosts]);
+              console.log("🔍 [fetchPosts] แสดงครบทุกโพสต์ Backend API (Highlight):", filteredBackendPosts);
+            }
+            
+            if (page === 1) {
+              console.log("🔍 [fetchPosts] Setting posts (page 1):", filteredBackendPosts);
+              setPosts(filteredBackendPosts);
+            } else {
+              console.log("🔍 [fetchPosts] Adding posts (page > 1):", filteredBackendPosts);
+              setPosts((prevPosts) => [...prevPosts, ...filteredBackendPosts]);
             }
             if (response.currentPage >= response.totalPages) {
               setHasMore(false);
@@ -230,7 +251,16 @@ export default function Articles() {
           } else {
             console.log("❌ [fetchPosts] Backend API ว่างเปล่า ใช้ข้อมูล mock");
             // ใช้ข้อมูล mock จาก blogPosts.js
-            setPosts(blogPosts);
+            let filteredMockPosts = blogPosts;
+            if (category !== "Highlight") {
+              filteredMockPosts = blogPosts.filter(post => 
+                post.category === category
+              );
+              console.log(`🔍 [fetchPosts] กรอง Mock data ตามหมวดหมู่ ${category}:`, filteredMockPosts);
+            } else {
+              console.log("🔍 [fetchPosts] แสดงครบทุกโพสต์ Mock data (Highlight):", filteredMockPosts);
+            }
+            setPosts(filteredMockPosts);
             setHasMore(false);
           }
         }
@@ -239,7 +269,16 @@ export default function Articles() {
       } catch (error) {
         console.log("❌ [fetchPosts] Posts API error:", error);
         // ใช้ข้อมูล fallback ถ้า API ล้มเหลว
-        setPosts(blogPosts);
+        let filteredFallbackPosts = blogPosts;
+        if (category !== "Highlight") {
+          filteredFallbackPosts = blogPosts.filter(post => 
+            post.category === category
+          );
+          console.log(`🔍 [fetchPosts] กรอง Fallback data ตามหมวดหมู่ ${category}:`, filteredFallbackPosts);
+        } else {
+          console.log("🔍 [fetchPosts] แสดงครบทุกโพสต์ Fallback data (Highlight):", filteredFallbackPosts);
+        }
+        setPosts(filteredFallbackPosts);
         setIsLoading(false);
       }
     };
