@@ -26,7 +26,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { categoriesAPI } from "@/config/api";
-import { categoriesAPI } from "@/config/api";
 
 export default function AdminCategoryManagementPage() {
   const navigate = useNavigate();
@@ -40,8 +39,6 @@ export default function AdminCategoryManagementPage() {
     const fetchCategories = async () => {
       try {
         setIsLoading(true);
-        const responseCategories = await categoriesAPI.getAll();
-        setCategories(responseCategories);
         const responseCategories = await categoriesAPI.getAll();
         setCategories(responseCategories);
       } catch (error) {

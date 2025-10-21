@@ -8,7 +8,6 @@ import { useAuth } from "@/contexts/authentication";
 import { toast } from "sonner";
 import axios from "axios";
 import { profileAPI } from "@/config/api";
-import { profileAPI } from "@/config/api";
 
 export default function AdminProfilePage() {
   const { state, fetchUser } = useAuth();
