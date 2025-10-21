@@ -26,6 +26,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { categoriesAPI } from "@/config/api";
+import { categoriesAPI } from "@/config/api";
 
 export default function AdminCategoryManagementPage() {
   const navigate = useNavigate();
@@ -39,6 +40,8 @@ export default function AdminCategoryManagementPage() {
     const fetchCategories = async () => {
       try {
         setIsLoading(true);
+        const responseCategories = await categoriesAPI.getAll();
+        setCategories(responseCategories);
         const responseCategories = await categoriesAPI.getAll();
         setCategories(responseCategories);
       } catch (error) {
@@ -63,6 +66,7 @@ export default function AdminCategoryManagementPage() {
   const handleDelete = async (categoryId) => {
     try {
       setIsLoading(true);
+      await categoriesAPI.delete(categoryId);
       await categoriesAPI.delete(categoryId);
       toast.custom((t) => (
         <div className="bg-green-500 text-white p-4 rounded-sm flex justify-between items-start">

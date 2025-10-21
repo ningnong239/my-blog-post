@@ -31,9 +31,12 @@ import "./utils/debugSignup"; // Import signup debug utilities
 jwtInterceptor();
 
 function AppContent() {
+function AppContent() {
   const { isAuthenticated, state } = useAuth();
 
   return (
+    <div className="App">
+      <Routes>
     <div className="App">
       <Routes>
         <Route path="/" element={<HomePage />} />
@@ -241,6 +244,13 @@ function AppContent() {
           }}
         />
       </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
   );
 }
 

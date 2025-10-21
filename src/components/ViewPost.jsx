@@ -24,6 +24,8 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/authentication";
 import { postsAPI } from "@/config/api";
 import { blogPosts } from "../data/blogPosts";
+import { postsAPI } from "@/config/api";
+import { blogPosts } from "../data/blogPosts";
 
 export default function ViewPost() {
   const [img, setImg] = useState("");
@@ -58,16 +60,36 @@ export default function ViewPost() {
       setDescription(postsResponse.description);
       setCategory(postsResponse.category);
       setContent(postsResponse.content);
+      const postsResponse = await postsAPI.getById(param.postId);
+      setImg(postsResponse.image);
+      setTitle(postsResponse.title);
+      setDate(postsResponse.date);
+      setDescription(postsResponse.description);
+      setCategory(postsResponse.category);
+      setContent(postsResponse.content);
       const likesResponse = await axios.get(
+        `https://myblogpostserver.vercel.app/posts/${param.postId}/likes`
         `https://myblogpostserver.vercel.app/posts/${param.postId}/likes`
       );
       setLikes(likesResponse.data.like_count);
       const commentsResponse = await axios.get(
         `https://myblogpostserver.vercel.app/posts/${param.postId}/comments`
+        `https://myblogpostserver.vercel.app/posts/${param.postId}/comments`
       );
       setComments(commentsResponse.data);
       setIsLoading(false);
     } catch (error) {
+      console.log("Post API error:", error);
+      // Use fallback post from mock data if API fails
+      const fallbackPost = blogPosts.find(post => post.id === parseInt(param.postId)) || blogPosts[0];
+      setImg(fallbackPost.image);
+      setTitle(fallbackPost.title);
+      setDate(fallbackPost.date);
+      setDescription(fallbackPost.description);
+      setCategory(fallbackPost.category);
+      setContent(fallbackPost.content);
+      setLikes(fallbackPost.likes || 0);
+      setComments([]); // No comments for fallback data
       console.log("Post API error:", error);
       // Use fallback post from mock data if API fails
       const fallbackPost = blogPosts.find(post => post.id === parseInt(param.postId)) || blogPosts[0];
@@ -179,11 +201,13 @@ function Share({ likesAmount, setDialogState, user, setLikes }) {
       try {
         await axios.post(
           `https://myblogpostserver.vercel.app/posts/${param.postId}/likes`
+          `https://myblogpostserver.vercel.app/posts/${param.postId}/likes`
         );
       } catch (error) {
         // If we get a 500 error, assume the post is already liked and try to unlike
         if (error.response?.status === 500) {
           await axios.delete(
+            `https://myblogpostserver.vercel.app/posts/${param.postId}/likes`
             `https://myblogpostserver.vercel.app/posts/${param.postId}/likes`
           );
         } else {
@@ -194,6 +218,7 @@ function Share({ likesAmount, setDialogState, user, setLikes }) {
 
       // After either liking or unliking, get the updated like count
       const likesResponse = await axios.get(
+        `https://myblogpostserver.vercel.app/posts/${param.postId}/likes`
         `https://myblogpostserver.vercel.app/posts/${param.postId}/likes`
       );
       setLikes(likesResponse.data.like_count);
@@ -290,9 +315,11 @@ function Comment({ setDialogState, commentList, setComments, user }) {
       setCommentText("");
       await axios.post(
         `https://myblogpostserver.vercel.app/posts/${param.postId}/comments`,
+        `https://myblogpostserver.vercel.app/posts/${param.postId}/comments`,
         { comment: commentText }
       );
       const commentsResponse = await axios.get(
+        `https://myblogpostserver.vercel.app/posts/${param.postId}/comments`
         `https://myblogpostserver.vercel.app/posts/${param.postId}/comments`
       );
       setComments(commentsResponse.data);
@@ -412,11 +439,16 @@ function AuthorBio() {
         👨‍💻 I'm a developer who loves coding, cooking, and creativity.<br /><br />
           🍳 When I'm not debugging, you'll probably find me experimenting in the kitchen.<br /><br />
           🎬 Movies and games are my favorite ways to unwind and get inspired.
+      <p>
+        👨‍💻 I'm a developer who loves coding, cooking, and creativity.<br /><br />
+          🍳 When I'm not debugging, you'll probably find me experimenting in the kitchen.<br /><br />
+          🎬 Movies and games are my favorite ways to unwind and get inspired.
         </p>
         <p>
         When I'm not coding, I love cooking, watching movies, and playing games.
         When I'm not coding, I love cooking, watching movies, and playing games.
         </p>
+
 
       </div>
     </div>
@@ -432,6 +464,7 @@ function CreateAccountModal({ dialogState, setDialogState }) {
           Create an account to continue
         </AlertDialogTitle>
         <button
+          onClick={() => navigate("/sign-up")}
           onClick={() => navigate("/sign-up")}
           className="rounded-full text-white bg-foreground hover:bg-muted-foreground transition-colors py-4 text-lg w-52"
         >
