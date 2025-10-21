@@ -12,30 +12,15 @@ export default defineConfig({
     },
   },
   build: {
-    rollupOptions: {
-      output: {
-        manualChunks: (id) => {
-          // แยก node_modules ออกเป็น chunks
-          if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('react-dom')) {
-              return 'react-vendor';
-            }
-            if (id.includes('@supabase')) {
-              return 'supabase';
-            }
-            if (id.includes('lucide-react')) {
-              return 'ui-icons';
-            }
-            if (id.includes('react-router')) {
-              return 'router';
-            }
-            // libraries อื่นๆ
-            return 'vendor';
-          }
-        },
-      },
-    },
     // เพิ่มขนาด limit เป็น 1000 kB
     chunkSizeWarningLimit: 1000,
+    // ลดขนาด bundle โดยการ minify
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true, // ลบ console.log ใน production
+        drop_debugger: true, // ลบ debugger ใน production
+      },
+    },
   },
 });
