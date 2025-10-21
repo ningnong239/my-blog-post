@@ -490,7 +490,7 @@ export default function Articles() {
         {console.log("🔍 [ArticlesSection] Posts is array:", Array.isArray(posts))}
         {posts.length === 0 ? (
           <div className="col-span-2 text-center py-8">
-            <p className="text-muted-foreground">ไม่พบข้อมูลโพสต์</p>
+            
             <p className="text-sm text-muted-foreground mt-2">
               กำลังโหลดข้อมูลจาก Supabase และ Backend API...
             </p>
