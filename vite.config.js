@@ -14,15 +14,24 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          // แยก vendor libraries
-          vendor: ['react', 'react-dom'],
-          // แยก Supabase
-          supabase: ['@supabase/supabase-js'],
-          // แยก UI components
-          ui: ['lucide-react'],
-          // แยก router
-          router: ['react-router-dom'],
+        manualChunks: (id) => {
+          // แยก node_modules ออกเป็น chunks
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom')) {
+              return 'react-vendor';
+            }
+            if (id.includes('@supabase')) {
+              return 'supabase';
+            }
+            if (id.includes('lucide-react')) {
+              return 'ui-icons';
+            }
+            if (id.includes('react-router')) {
+              return 'router';
+            }
+            // libraries อื่นๆ
+            return 'vendor';
+          }
         },
       },
     },
