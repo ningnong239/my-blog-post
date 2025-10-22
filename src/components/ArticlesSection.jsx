@@ -367,9 +367,7 @@ export default function Articles() {
               <p className="text-sm font-medium text-yellow-800">
                 API Server Unavailable
               </p>
-              <p className="text-xs text-yellow-700">
-                Using offline data. Some features may be limited.
-              </p>
+              
             </div>
           </div>
           <button
