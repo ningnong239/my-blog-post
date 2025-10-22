@@ -13,7 +13,12 @@ export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
 // Debug function
 export const debugSupabase = () => {
   console.log('🔧 Supabase Configuration:');
-  console.log('URL:', supabaseUrl);
-  console.log('Anon Key:', supabaseAnonKey ? '✅ Set' : '❌ Missing');
-  console.log('Service Key:', supabaseServiceKey ? '✅ Set' : '❌ Missing');
+  console.log('Environment:', import.meta.env.MODE);
+  console.log('URL from env:', import.meta.env.VITE_SUPABASE_URL);
+  console.log('URL fallback:', supabaseUrl);
+  console.log('Anon Key from env:', import.meta.env.VITE_SUPABASE_ANON_KEY ? '✅ Set' : '❌ Missing');
+  console.log('Anon Key fallback:', supabaseAnonKey ? '✅ Set' : '❌ Missing');
+  console.log('Service Key from env:', import.meta.env.SUPABASE_SERVICE_ROLE_KEY ? '✅ Set' : '❌ Missing');
+  console.log('Service Key fallback:', supabaseServiceKey ? '✅ Set' : '❌ Missing');
+  console.log('All env vars:', import.meta.env);
 }

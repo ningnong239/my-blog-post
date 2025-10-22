@@ -255,8 +255,14 @@ export const postsService = {
 
       if (error) throw error;
 
-      debugAPI.response(`/posts/${postId}`, 200, data);
-      return { data, error: null };
+      // Transform likes_count to likes for backward compatibility
+      const transformedData = {
+        ...data,
+        likes: data.likes_count || 0
+      };
+
+      debugAPI.response(`/posts/${postId}`, 200, transformedData);
+      return { data: transformedData, error: null };
     } catch (error) {
       debugError(error, 'postsService.getPostById');
       return { data: null, error };
@@ -339,9 +345,9 @@ export const postsService = {
       
       const { data, error } = await supabase
         .from('posts')
-        .update({ likes: supabase.raw('likes + 1') })
+        .update({ likes_count: supabase.raw('likes_count + 1') })
         .eq('id', postId)
-        .select('likes')
+        .select('likes_count')
         .single();
 
       if (error) throw error;
@@ -350,6 +356,49 @@ export const postsService = {
       return { data, error: null };
     } catch (error) {
       debugError(error, 'postsService.likePost');
+      return { data: null, error };
+    }
+  },
+
+  // Unlike post
+  async unlikePost(postId) {
+    try {
+      debugAPI.request(`/posts/${postId}/unlike`, 'DELETE');
+      
+      const { data, error } = await supabase
+        .from('posts')
+        .update({ likes_count: supabase.raw('likes_count - 1') })
+        .eq('id', postId)
+        .select('likes_count')
+        .single();
+
+      if (error) throw error;
+
+      debugAPI.response(`/posts/${postId}/unlike`, 200, data);
+      return { data, error: null };
+    } catch (error) {
+      debugError(error, 'postsService.unlikePost');
+      return { data: null, error };
+    }
+  },
+
+  // Get post likes count
+  async getPostLikes(postId) {
+    try {
+      debugAPI.request(`/posts/${postId}/likes`, 'GET');
+      
+      const { data, error } = await supabase
+        .from('posts')
+        .select('likes_count')
+        .eq('id', postId)
+        .single();
+
+      if (error) throw error;
+
+      debugAPI.response(`/posts/${postId}/likes`, 200, data);
+      return { data: { like_count: data.likes_count }, error: null };
+    } catch (error) {
+      debugError(error, 'postsService.getPostLikes');
       return { data: null, error };
     }
   }
