@@ -112,6 +112,14 @@ function AuthProvider(props) {
     console.log("=== LOGIN START ===");
     console.log("Login attempt with:", data);
     
+    // Debug environment variables
+    console.log("🔧 [login] Environment check:");
+    console.log("Environment mode:", import.meta.env.MODE);
+    console.log("VITE_SUPABASE_URL:", import.meta.env.VITE_SUPABASE_URL);
+    console.log("VITE_SUPABASE_ANON_KEY:", import.meta.env.VITE_SUPABASE_ANON_KEY ? "✅ Set" : "❌ Missing");
+    console.log("Supabase client URL:", supabase.supabaseUrl);
+    console.log("Supabase client key:", supabase.supabaseKey ? "✅ Set" : "❌ Missing");
+    
     try {
       setState((prevState) => ({ ...prevState, loading: true, error: null }));
       
