@@ -1,6 +1,7 @@
 /* eslint-disable react/prop-types */
 import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
+import axios from "axios";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -23,6 +24,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/authentication";
 import { postsAPI } from "@/config/api";
+import { postsService } from "@/services/supabaseService";
 import { blogPosts } from "../data/blogPosts";
 
 export default function ViewPost() {
@@ -51,6 +53,7 @@ export default function ViewPost() {
   const getPost = async () => {
     setIsLoading(true);
     try {
+      // Get post data from Supabase
       const postsResponse = await postsAPI.getById(param.postId);
       setImg(postsResponse.image);
       setTitle(postsResponse.title);
@@ -58,15 +61,20 @@ export default function ViewPost() {
       setDescription(postsResponse.description);
       setCategory(postsResponse.category);
       setContent(postsResponse.content);
-      const likesResponse = await axios.get(
-        `https://myblogpostserver.vercel.app/posts/${param.postId}/likes`
-      );
-      setLikes(likesResponse.data.like_count);
-      const commentsResponse = await axios.get(
-        `https://myblogpostserver.vercel.app/posts/${param.postId}/comments`
-        `https://myblogpostserver.vercel.app/posts/${param.postId}/comments`
-      );
-      setComments(commentsResponse.data);
+      setLikes(postsResponse.likes || 0); // Use likes from post data
+      
+      // Get comments from Supabase
+      const commentsResult = await postsService.getComments?.(param.postId);
+      if (commentsResult?.data) {
+        setComments(commentsResult.data);
+      } else {
+        // Fallback to external API if Supabase comments service not available
+        const commentsResponse = await axios.get(
+          `https://myblogpostserver.vercel.app/posts/${param.postId}/comments`
+        );
+        setComments(commentsResponse.data);
+      }
+      
       setIsLoading(false);
     } catch (error) {
       console.log("Post API error:", error);
@@ -80,6 +88,7 @@ export default function ViewPost() {
       setContent(fallbackPost.content);
       setLikes(fallbackPost.likes || 0);
       setComments([]); // No comments for fallback data
+      setUseFallbackData(true); // Set fallback data flag
       setIsLoading(false);
     }
   };
@@ -140,14 +149,13 @@ export default function ViewPost() {
             user={user}
             setLikes={setLikes}
           />
-          {!useFallbackData && (
-            <Comment
-              setDialogState={setIsDialogOpen}
-              commentList={comments}
-              user={user}
-              setComments={setComments}
-            />
-          )}
+          <Comment
+            setDialogState={setIsDialogOpen}
+            commentList={comments}
+            user={user}
+            setComments={setComments}
+            useFallbackData={useFallbackData}
+          />
         </div>
 
         <div className="hidden xl:block xl:w-1/4">
@@ -176,32 +184,38 @@ function Share({ likesAmount, setDialogState, user, setLikes }) {
 
     setIsLiking(true);
     try {
-      // First try to like the post
-      try {
-        await axios.post(
-          `https://myblogpostserver.vercel.app/posts/${param.postId}/likes`
-          `https://myblogpostserver.vercel.app/posts/${param.postId}/likes`
-        );
-      } catch (error) {
-        // If we get a 500 error, assume the post is already liked and try to unlike
-        if (error.response?.status === 500) {
-          await axios.delete(
-            `https://myblogpostserver.vercel.app/posts/${param.postId}/likes`
-            `https://myblogpostserver.vercel.app/posts/${param.postId}/likes`
-          );
-        } else {
-          // If it's a different error, throw it to be caught by the outer try-catch
-          throw error;
+      // Try to like the post using Supabase
+      const likeResult = await postsService.likePost(param.postId);
+      
+      if (likeResult.error) {
+        // If like fails, try to unlike (assuming it's already liked)
+        const unlikeResult = await postsService.unlikePost(param.postId);
+        if (unlikeResult.error) {
+          throw unlikeResult.error;
         }
       }
 
-      // After either liking or unliking, get the updated like count
-      const likesResponse = await axios.get(
-        `https://myblogpostserver.vercel.app/posts/${param.postId}/likes`
-      );
-      setLikes(likesResponse.data.like_count);
+      // Get updated like count
+      const likesResult = await postsService.getPostLikes(param.postId);
+      if (likesResult.data) {
+        setLikes(likesResult.data.like_count);
+      }
     } catch (error) {
       console.error("Error handling like:", error);
+      // If Supabase fails, try external API as fallback
+      try {
+        await axios.post(
+          `https://myblogpostserver.vercel.app/posts/${param.postId}/likes`
+        );
+        const likesResponse = await axios.get(
+          `https://myblogpostserver.vercel.app/posts/${param.postId}/likes`
+        );
+        setLikes(likesResponse.data.like_count);
+      } catch (apiError) {
+        console.error("External API also failed:", apiError);
+        // If all APIs fail, just increment locally
+        setLikes(prevLikes => prevLikes + 1);
+      }
     } finally {
       setIsLiking(false);
     }
@@ -278,7 +292,7 @@ function Share({ likesAmount, setDialogState, user, setLikes }) {
   );
 }
 
-function Comment({ setDialogState, commentList, setComments, user }) {
+function Comment({ setDialogState, commentList, setComments, user, useFallbackData }) {
   const [commentText, setCommentText] = useState("");
   const [isError, setIsError] = useState(false);
   const param = useParams();
@@ -291,32 +305,99 @@ function Comment({ setDialogState, commentList, setComments, user }) {
       setIsError(false);
       const commentToSubmit = commentText;
       setCommentText("");
-      await axios.post(
-        `https://myblogpostserver.vercel.app/posts/${param.postId}/comments`,
-        `https://myblogpostserver.vercel.app/posts/${param.postId}/comments`,
-        { comment: commentText }
-      );
-      const commentsResponse = await axios.get(
-        `https://myblogpostserver.vercel.app/posts/${param.postId}/comments`
-        `https://myblogpostserver.vercel.app/posts/${param.postId}/comments`
-      );
-      setComments(commentsResponse.data);
-      toast.custom((t) => (
-        <div className="bg-green-500 text-white p-4 rounded-sm flex justify-between items-start max-w-md w-full">
-          <div>
-            <h2 className="font-bold text-lg mb-1">Comment Posted!</h2>
-            <p className="text-sm">
-              Your comment has been successfully added to this post.
-            </p>
+      
+      if (useFallbackData) {
+        // For fallback data, just add comment locally
+        const newComment = {
+          id: Date.now(),
+          comment_text: commentToSubmit,
+          name: user?.user_metadata?.full_name || "Anonymous",
+          profile_pic: user?.user_metadata?.avatar_url || "https://via.placeholder.com/40",
+          created_at: new Date().toISOString()
+        };
+        setComments(prev => [...prev, newComment]);
+        toast.custom((t) => (
+          <div className="bg-green-500 text-white p-4 rounded-sm flex justify-between items-start max-w-md w-full">
+            <div>
+              <h2 className="font-bold text-lg mb-1">Comment Posted!</h2>
+              <p className="text-sm">
+                Your comment has been added locally (offline mode).
+              </p>
+            </div>
+            <button
+              onClick={() => toast.dismiss(t)}
+              className="text-white hover:text-gray-200"
+            >
+              <X size={20} />
+            </button>
           </div>
-          <button
-            onClick={() => toast.dismiss(t)}
-            className="text-white hover:text-gray-200"
-          >
-            <X size={20} />
-          </button>
-        </div>
-      ));
+        ));
+      } else {
+        // For normal API mode - try Supabase first
+        try {
+          const commentData = {
+            post_id: parseInt(param.postId),
+            comment_text: commentToSubmit,
+            user_id: user.id,
+            name: user.user_metadata?.full_name || "Anonymous",
+            profile_pic: user.user_metadata?.avatar_url || "https://via.placeholder.com/40"
+          };
+
+          const result = await postsService.createComment?.(commentData);
+          if (result?.data) {
+            // Get updated comments from Supabase
+            const commentsResult = await postsService.getComments?.(param.postId);
+            if (commentsResult?.data) {
+              setComments(commentsResult.data);
+            }
+          } else {
+            // Fallback to external API
+            await axios.post(
+              `https://myblogpostserver.vercel.app/posts/${param.postId}/comments`,
+              { comment: commentText }
+            );
+            const commentsResponse = await axios.get(
+              `https://myblogpostserver.vercel.app/posts/${param.postId}/comments`
+            );
+            setComments(commentsResponse.data);
+          }
+
+          toast.custom((t) => (
+            <div className="bg-green-500 text-white p-4 rounded-sm flex justify-between items-start max-w-md w-full">
+              <div>
+                <h2 className="font-bold text-lg mb-1">Comment Posted!</h2>
+                <p className="text-sm">
+                  Your comment has been successfully added to this post.
+                </p>
+              </div>
+              <button
+                onClick={() => toast.dismiss(t)}
+                className="text-white hover:text-gray-200"
+              >
+                <X size={20} />
+              </button>
+            </div>
+          ));
+        } catch (error) {
+          console.error("Error posting comment:", error);
+          toast.custom((t) => (
+            <div className="bg-red-500 text-white p-4 rounded-sm flex justify-between items-start max-w-md w-full">
+              <div>
+                <h2 className="font-bold text-lg mb-1">Error!</h2>
+                <p className="text-sm">
+                  Failed to post comment. Please try again.
+                </p>
+              </div>
+              <button
+                onClick={() => toast.dismiss(t)}
+                className="text-white hover:text-gray-200"
+              >
+                <X size={20} />
+              </button>
+            </div>
+          ));
+        }
+      }
     }
   };
 
