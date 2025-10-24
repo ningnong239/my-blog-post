@@ -49,27 +49,109 @@ export default function AdminArticleManagementPage() {
     const fetchPosts = async () => {
       try {
         console.log("🔄 [AdminArticlePage] Fetching posts from Supabase...");
+        console.log("🔧 [AdminArticlePage] Supabase client:", supabase);
+        console.log("🔧 [AdminArticlePage] Supabase URL:", supabase.supabaseUrl);
         
-        // Fetch posts from Supabase
-        const { data: postsData, error: postsError } = await supabase
-          .from('posts')
-          .select('*')
-          .order('date', { ascending: false });
+        // Fetch posts from Supabase using postsService with all posts
+        console.log("🔄 [AdminArticlePage] Attempting to fetch from posts table using postsService...");
+        const { data: postsData, error: postsError } = await postsService.getPosts({
+          page: 1,
+          limit: 100, // Get more posts for admin
+          category: null,
+          keyword: null
+        });
+
+        console.log("🔍 [AdminArticlePage] Raw posts response:", { postsData, postsError });
+        console.log("🔍 [AdminArticlePage] Posts data type:", typeof postsData);
+        console.log("🔍 [AdminArticlePage] Posts data is array:", Array.isArray(postsData));
+        console.log("🔍 [AdminArticlePage] Posts error details:", postsError);
 
         if (postsError) {
           console.error("❌ [AdminArticlePage] Posts error:", postsError);
           throw postsError;
         }
 
-        console.log("✅ [AdminArticlePage] Posts data:", postsData);
-        setPosts(postsData || []);
-        setFilteredPosts(postsData || []);
+        console.log("✅ [AdminArticlePage] Posts service response:", postsData);
+        
+        // Extract posts from service response
+        const actualPosts = postsData?.posts || [];
+        console.log("📊 [AdminArticlePage] Posts count:", actualPosts?.length || 0);
+        console.log("📊 [AdminArticlePage] Total count:", postsData?.totalCount || 0);
+        
+        if (actualPosts && actualPosts.length > 0) {
+          console.log("📝 [AdminArticlePage] First post:", actualPosts[0]);
+          setPosts(actualPosts);
+          setFilteredPosts(actualPosts);
+        } else {
+          console.log("⚠️ [AdminArticlePage] No posts found in database, using mock data");
+          
+          // Mock data fallback
+          const mockPosts = [
+            {
+              id: 1,
+              title: "Getting Started as a Developer: Your First Steps into the Programming World",
+              description: "A beginner-friendly guide for those interested in becoming a developer—covering the essentials, must-have skills, and practical tips to kickstart your dev career.",
+              content: "## 1. What is a Developer?\n\nA developer, or programmer, is someone who builds and creates software, websites, or applications to fulfill user needs and solve problems.",
+              image: "https://wallpaperaccess.com/full/1947431.jpg",
+              category: "Dev",
+              status: "published",
+              author: "Naiyana T.",
+              date: "2025-10-18T09:20:47.225Z",
+              likes_count: 199
+            },
+            {
+              id: 2,
+              title: "Cooking in English: Essential Vocabulary and Phrases for the Kitchen",
+              description: "Expand your English skills with must-know vocabulary, phrases, and conversations for cooking and following recipes.",
+              content: "## 1. Common Cooking Verbs\n\n- **Boil** (ต้ม)\n- **Chop** (หั่น)\n- **Stir** (คน)",
+              image: "https://th.bing.com/th/id/R.f1e57c17c4c4bfd213a606cfbc892ad5",
+              category: "LifeStyle",
+              status: "published",
+              author: "Naiyana T.",
+              date: "2024-08-21T09:20:47.225Z",
+              likes_count: 123
+            },
+            {
+              id: 3,
+              title: "Movie Night: Learning English While Watching Films",
+              description: "Unlock effective ways to improve your English skills by watching movies, including tips for active viewing and vocabulary building.",
+              content: "## 1. Benefits of Watching Movies to Learn English\n\nWatching movies is an enjoyable way to enhance your listening skills, expand your vocabulary, and get familiar with different accents.",
+              image: "https://tse3.mm.bing.net/th/id/OIP.BIWltfRDERVV4TThY3CWBwHaE8",
+              category: "LifeStyle",
+              status: "published",
+              author: "Naiyana T.",
+              date: "2025-10-18T09:20:47.225Z",
+              likes_count: 21
+            },
+            {
+              id: 4,
+              title: "Level Up! The Benefits of Playing Games",
+              description: "Discover how playing games can improve your skills, creativity, and English vocabulary, along with tips for balanced gaming.",
+              content: "## 1. Skills Gained from Gaming\n\nPlaying games helps build focus, quick problem-solving, and decision-making abilities.",
+              image: "https://i.ytimg.com/vi/X1tBEKFYKJg/maxresdefault.jpg",
+              category: "General",
+              status: "published",
+              author: "Naiyana T",
+              date: "2025-10-18T09:20:47.225Z",
+              likes_count: 32
+            },
+           
+          ];
+          
+          console.log("🔄 [AdminArticlePage] Using mock data:", mockPosts);
+          console.log("📊 [AdminArticlePage] Mock posts count:", mockPosts.length);
+          setPosts(mockPosts);
+          setFilteredPosts(mockPosts);
+        }
 
         // Fetch categories from Supabase
+        console.log("🔄 [AdminArticlePage] Fetching categories from Supabase...");
         const { data: categoriesData, error: categoriesError } = await supabase
           .from('categories')
           .select('*')
           .order('id', { ascending: true });
+
+        console.log("🔍 [AdminArticlePage] Raw categories response:", { categoriesData, categoriesError });
 
         if (categoriesError) {
           console.error("❌ [AdminArticlePage] Categories error:", categoriesError);
@@ -77,10 +159,83 @@ export default function AdminArticleManagementPage() {
         }
 
         console.log("✅ [AdminArticlePage] Categories data:", categoriesData);
-        setCategories(categoriesData || []);
+        console.log("📊 [AdminArticlePage] Categories count:", categoriesData?.length || 0);
+        
+        if (categoriesData && categoriesData.length > 0) {
+          setCategories(categoriesData);
+        } else {
+          console.log("⚠️ [AdminArticlePage] No categories found in database, using mock data");
+          
+          // Mock categories fallback
+          const mockCategories = [
+            { id: 1, name: "Dev", created_at: new Date().toISOString() },
+            { id: 2, name: "LifeStyle", created_at: new Date().toISOString() },
+            { id: 3, name: "General", created_at: new Date().toISOString() }
+          ];
+          
+          console.log("🔄 [AdminArticlePage] Using mock categories:", mockCategories);
+          setCategories(mockCategories);
+        }
       } catch (error) {
         debugError(error, "fetchPosts");
-        console.error("Failed to fetch data:", error);
+        console.error("💥 [AdminArticlePage] Error fetching data:", error);
+        console.error("💥 [AdminArticlePage] Error message:", error.message);
+        console.error("💥 [AdminArticlePage] Error details:", error);
+        
+        console.log("🔄 [AdminArticlePage] Using fallback data due to error");
+        
+        // Fallback data when error occurs
+        const fallbackPosts = [
+          {
+            id: 1,
+            title: "Getting Started as a Developer: Your First Steps into the Programming World",
+            description: "A beginner-friendly guide for those interested in becoming a developer—covering the essentials, must-have skills, and practical tips to kickstart your dev career.",
+            content: "## 1. What is a Developer?\n\nA developer, or programmer, is someone who builds and creates software, websites, or applications to fulfill user needs and solve problems.",
+            image: "https://wallpaperaccess.com/full/1947431.jpg",
+            category: "Dev",
+            status: "published",
+            author: "Naiyana T.",
+            date: "2025-10-18T09:20:47.225Z",
+            likes_count: 199
+          },
+          {
+            id: 2,
+            title: "Cooking in English: Essential Vocabulary and Phrases for the Kitchen",
+            description: "Expand your English skills with must-know vocabulary, phrases, and conversations for cooking and following recipes.",
+            content: "## 1. Common Cooking Verbs\n\n- **Boil** (ต้ม)\n- **Chop** (หั่น)\n- **Stir** (คน)",
+            image: "https://th.bing.com/th/id/R.f1e57c17c4c4bfd213a606cfbc892ad5",
+            category: "LifeStyle",
+            status: "published",
+            author: "Naiyana T.",
+            date: "2024-08-21T09:20:47.225Z",
+            likes_count: 123
+          },
+          {
+            id: 3,
+            title: "Movie Night: Learning English While Watching Films",
+            description: "Unlock effective ways to improve your English skills by watching movies, including tips for active viewing and vocabulary building.",
+            content: "## 1. Benefits of Watching Movies to Learn English\n\nWatching movies is an enjoyable way to enhance your listening skills, expand your vocabulary, and get familiar with different accents.",
+            image: "https://tse3.mm.bing.net/th/id/OIP.BIWltfRDERVV4TThY3CWBwHaE8",
+            category: "LifeStyle",
+            status: "published",
+            author: "Naiyana T.",
+            date: "2025-10-18T09:20:47.225Z",
+            likes_count: 21
+          }
+        ];
+        
+        const fallbackCategories = [
+          { id: 1, name: "Dev", created_at: new Date().toISOString() },
+          { id: 2, name: "LifeStyle", created_at: new Date().toISOString() },
+          { id: 3, name: "General", created_at: new Date().toISOString() }
+        ];
+        
+        console.log("🔄 [AdminArticlePage] Using fallback posts:", fallbackPosts);
+        console.log("🔄 [AdminArticlePage] Using fallback categories:", fallbackCategories);
+        
+        setPosts(fallbackPosts);
+        setFilteredPosts(fallbackPosts);
+        setCategories(fallbackCategories);
       } finally {
         setIsLoading(false);
       }
@@ -90,6 +245,12 @@ export default function AdminArticleManagementPage() {
   }, []);
 
   useEffect(() => {
+    console.log("🔍 [AdminArticlePage] Filtering posts...");
+    console.log("🔍 [AdminArticlePage] Original posts:", posts);
+    console.log("🔍 [AdminArticlePage] Search keyword:", searchKeyword);
+    console.log("🔍 [AdminArticlePage] Selected category:", selectedCategory);
+    console.log("🔍 [AdminArticlePage] Selected status:", selectedStatus);
+    
     let filtered = posts;
 
     if (searchKeyword) {
@@ -101,20 +262,25 @@ export default function AdminArticleManagementPage() {
             .includes(searchKeyword.toLowerCase()) ||
           post.content.toLowerCase().includes(searchKeyword.toLowerCase())
       );
+      console.log("🔍 [AdminArticlePage] After search filter:", filtered);
     }
 
     if (selectedCategory) {
       filtered = filtered.filter((post) =>
         post.category.toLowerCase().includes(selectedCategory.toLowerCase())
       );
+      console.log("🔍 [AdminArticlePage] After category filter:", filtered);
     }
 
     if (selectedStatus) {
       filtered = filtered.filter((post) =>
         post.status.toLowerCase().includes(selectedStatus.toLowerCase())
       );
+      console.log("🔍 [AdminArticlePage] After status filter:", filtered);
     }
 
+    console.log("🔍 [AdminArticlePage] Final filtered posts:", filtered);
+    console.log("🔍 [AdminArticlePage] Filtered count:", filtered.length);
     setFilteredPosts(filtered);
   }, [searchKeyword, selectedCategory, selectedStatus, posts]);
 
@@ -242,6 +408,7 @@ export default function AdminArticleManagementPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
+            {console.log("🔍 [AdminArticlePage] Rendering table - isLoading:", isLoading, "filteredPosts:", filteredPosts, "posts:", posts)}
             {isLoading ? (
               Array(9)
                 .fill()

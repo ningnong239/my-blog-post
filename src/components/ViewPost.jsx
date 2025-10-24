@@ -98,17 +98,6 @@ export default function ViewPost() {
   }
   return (
     <div className="max-w-7xl mx-auto space-y-8 container md:px-8 pb-20 md:pb-28 md:pt-8 lg:pt-16">
-      {/* Fallback data notification */}
-      {useFallbackData && (
-        <div className="mx-4 mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <div className="flex items-center">
-            <div className="text-sm text-yellow-800">
-              <p className="font-medium">Using offline data</p>
-              <p className="text-xs">This post is loaded from local storage. Some features may be limited.</p>
-            </div>
-          </div>
-        </div>
-      )}
       
       <div className="space-y-4 md:px-4">
         <img

@@ -38,7 +38,11 @@ export default function AdminCategoryManagementPage() {
     const fetchCategories = async () => {
       try {
         setIsLoading(true);
+        console.log("🔄 [AdminCategoryPage] Fetching categories from Supabase...");
+        
         const { data: categoriesData, error: categoriesError } = await categoriesService.getCategories();
+        
+        console.log("🔍 [AdminCategoryPage] Raw response:", { categoriesData, categoriesError });
         
         if (categoriesError) {
           console.error("❌ [AdminCategoryPage] Categories error:", categoriesError);
@@ -46,10 +50,20 @@ export default function AdminCategoryManagementPage() {
         }
 
         console.log("✅ [AdminCategoryPage] Categories data:", categoriesData);
+        console.log("📊 [AdminCategoryPage] Categories count:", categoriesData?.length || 0);
+        
+        if (categoriesData && categoriesData.length > 0) {
+          console.log("📝 [AdminCategoryPage] First category:", categoriesData[0]);
+        } else {
+          console.log("⚠️ [AdminCategoryPage] No categories found in database");
+        }
+        
         setCategories(categoriesData || []);
       } catch (error) {
         debugError(error, "fetchCategories");
-        console.error("Error fetching categories data:", error);
+        console.error("💥 [AdminCategoryPage] Error fetching categories data:", error);
+        console.error("💥 [AdminCategoryPage] Error message:", error.message);
+        console.error("💥 [AdminCategoryPage] Error details:", error);
         navigate("*");
       } finally {
         setIsLoading(false);

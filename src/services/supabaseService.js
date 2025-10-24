@@ -413,17 +413,29 @@ export const categoriesService = {
   async getCategories() {
     try {
       debugAPI.request('/categories', 'GET');
+      console.log("🔄 [categoriesService] Fetching categories from Supabase...");
+      console.log("🔧 [categoriesService] Supabase client:", supabase);
+      console.log("🔧 [categoriesService] Supabase URL:", supabase.supabaseUrl);
       
       const { data, error } = await supabase
         .from('categories')
         .select('*')
         .order('name');
 
-      if (error) throw error;
+      console.log("🔍 [categoriesService] Raw Supabase response:", { data, error });
 
+      if (error) {
+        console.error("❌ [categoriesService] Supabase error:", error);
+        throw error;
+      }
+
+      console.log("✅ [categoriesService] Categories fetched successfully:", data);
+      console.log("📊 [categoriesService] Categories count:", data?.length || 0);
+      
       debugAPI.response('/categories', 200, data);
       return { data: data || [], error: null };
     } catch (error) {
+      console.error("💥 [categoriesService] Error in getCategories:", error);
       debugError(error, 'categoriesService.getCategories');
       return { data: null, error };
     }
