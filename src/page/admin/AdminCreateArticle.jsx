@@ -60,6 +60,35 @@ export default function AdminCreateArticlePage() {
     fetchCategories();
   }, [navigate]);
 
+  // Listen for categoriesUpdated event
+  useEffect(() => {
+    const handleCategoriesUpdate = async (event) => {
+      console.log("📡 [AdminCreateArticle] Received categoriesUpdated event:", event.detail);
+      
+      try {
+        // Refetch categories when event is received
+        console.log("🔄 [AdminCreateArticle] Refetching categories...");
+        const { data: categoriesData, error: categoriesError } = await categoriesService.getCategories();
+
+        if (categoriesError) {
+          console.error("❌ [AdminCreateArticle] Categories refetch error:", categoriesError);
+          return;
+        }
+
+        console.log("✅ [AdminCreateArticle] Categories refetched:", categoriesData);
+        setCategories(categoriesData || []);
+      } catch (error) {
+        console.error("💥 [AdminCreateArticle] Error refetching categories:", error);
+      }
+    };
+
+    window.addEventListener('categoriesUpdated', handleCategoriesUpdate);
+    
+    return () => {
+      window.removeEventListener('categoriesUpdated', handleCategoriesUpdate);
+    };
+  }, []);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setPost((prevData) => ({
