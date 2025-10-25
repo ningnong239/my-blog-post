@@ -1,8 +1,7 @@
 /* eslint-disable react/prop-types */
 import { useEffect, useState } from "react";
 import { postsAPI, categoriesAPI } from "../config/api";
-import { blogPosts } from "../data/blogPosts";
-import { Search, Loader2 } from "lucide-react";
+import { Search, Loader2, AlertCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -14,7 +13,6 @@ import {
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "./ui/skeleton";
 import { BlogCard } from "./BlogCard";
-import { supabase } from "../lib/supabase";
 
 export default function Articles() {
  
@@ -29,144 +27,55 @@ export default function Articles() {
   const [categories, setCategories] = useState([]);
   const [isFirstTimeRender, setIsFirstTimeRender] = useState(true);
   const [apiError, setApiError] = useState(false);
-  const [useFallbackData, setUseFallbackData] = useState(true); // Start with fallback data
+  const [useFallbackData, setUseFallbackData] = useState(false); // Disable fallback data to test API
 
   const navigate = useNavigate();
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // ฟังก์ชันสำหรับดึงข้อมูลโพสต์จาก Supabase
-  const fetchPostsFromSupabase = async () => {
-    try {
-      console.log("🔄 [fetchPostsFromSupabase] กำลังดึงข้อมูลโพสต์จาก Supabase...");
-      
-      // ดึงข้อมูลหมวดหมู่ก่อน
-      const { data: categoriesData, error: categoriesError } = await supabase
-        .from('categories')
-        .select('id, name')
-        .order('id', { ascending: true });
-      
-      if (categoriesError) {
-        console.error("❌ [fetchPostsFromSupabase] Categories error:", categoriesError);
-        throw categoriesError;
-      }
-      
-      console.log("✅ [fetchPostsFromSupabase] ข้อมูลหมวดหมู่:", categoriesData);
-      
-      // สร้าง mapping สำหรับหมวดหมู่
-      const categoryMap = {};
-      categoriesData?.forEach(cat => {
-        categoryMap[cat.id] = cat.name;
-      });
-      
-      // ดึงข้อมูลโพสต์
-      const { data: postsData, error: postsError } = await supabase
-        .from('posts')
-        .select(`
-          id,
-          title,
-          description,
-          content,
-          image,
-          date,
-          likes_count
-        `)
-        .order('date', { ascending: false });
-      
-      if (postsError) {
-        console.error("❌ [fetchPostsFromSupabase] Supabase posts error:", postsError);
-        throw postsError;
-      }
-      
-      console.log("✅ [fetchPostsFromSupabase] ข้อมูลโพสต์จาก Supabase:", postsData);
-      
-      // แปลงข้อมูลให้ตรงกับรูปแบบที่ BlogCard ต้องการ
-      const transformedPosts = postsData?.map((post) => {
-        console.log("🔍 [fetchPostsFromSupabase] Post category_id:", post.category_id, "for post:", post.title);
-        
-        // ใช้ category_id เพื่อ map กับ category name
-        let categoryName = 'General';
-        if (post.category_id === 1) categoryName = 'Dev';
-        else if (post.category_id === 2) categoryName = 'LifeStyle';
-        else if (post.category_id === 3) categoryName = 'General';
-        else categoryName = 'General';
-        
-        console.log("🔍 [fetchPostsFromSupabase] Mapped category:", categoryName, "for post:", post.title);
-        
-        return {
-          id: post.id,
-          title: post.title,
-          description: post.description,
-          content: post.content,
-          image: post.image,
-          category: categoryName,
-          author: 'Naiyana T.', // ตั้งค่าเริ่มต้น
-          date: post.date,
-          likes: post.likes_count || 0
-        };
-      }) || [];
-      
-      console.log("✅ [fetchPostsFromSupabase] ข้อมูลที่แปลงแล้ว:", transformedPosts);
-      return transformedPosts;
-      
-    } catch (error) {
-      console.error("💥 [fetchPostsFromSupabase] Error fetching posts from Supabase:", error);
-      return [];
-    }
-  };
+  // ไม่ต้องใช้ fetchPostsFromSupabase() และ fetchCategoriesFromSupabase() อีกต่อไป 
+  // ใช้ postsAPI.getAll() และ categoriesAPI.getAll() แทน
 
-  // ฟังก์ชันสำหรับดึงข้อมูลหมวดหมู่จาก Supabase
-  const fetchCategoriesFromSupabase = async () => {
-    try {
-      console.log("🔄 [fetchCategoriesFromSupabase] กำลังดึงข้อมูลหมวดหมู่จาก Supabase...");
-      
-      const { data: categoriesData, error: categoriesError } = await supabase
-        .from('categories')
-        .select('id, name')
-        .order('name', { ascending: true });
-      
-      if (categoriesError) {
-        console.error("❌ [fetchCategoriesFromSupabase] Supabase categories error:", categoriesError);
-        throw categoriesError;
-      }
-      
-      console.log("✅ [fetchCategoriesFromSupabase] ข้อมูลหมวดหมู่จาก Supabase:", categoriesData);
-      return categoriesData || [];
-      
-    } catch (error) {
-      console.error("💥 [fetchCategoriesFromSupabase] Error fetching categories from Supabase:", error);
-      return [];
-    }
-  };
+  // ฟัง event จาก Admin Edit Page เมื่อมีการอัพเดทโพสต์
+  useEffect(() => {
+    const handlePostsUpdated = (event) => {
+      console.log("📡 [ArticlesSection] Received postsUpdated event:", event.detail);
+      console.log("🔄 [ArticlesSection] Triggering data refresh...");
+      setRefreshTrigger(prev => prev + 1);
+    };
+
+    window.addEventListener('postsUpdated', handlePostsUpdated);
+    
+    return () => {
+      window.removeEventListener('postsUpdated', handlePostsUpdated);
+    };
+  }, []);
 
   useEffect(() => {
     // ดึงข้อมูลหมวดหมู่เมื่อเริ่มต้น
     if (isFirstTimeRender) {
       const fetchCategories = async () => {
         try {
-          console.log("🔄 [fetchCategories] กำลังดึงข้อมูลหมวดหมู่...");
+          console.log("🔄 [ArticlesSection.fetchCategories] กำลังดึงข้อมูลหมวดหมู่...");
           
-          // ลองใช้ Supabase ก่อน
-          const supabaseCategories = await fetchCategoriesFromSupabase();
+          // ใช้ categoriesAPI.getAll() ซึ่งจะเรียก Supabase service และมี console.log ครบถ้วน
+          const responseCategories = await categoriesAPI.getAll();
+          console.log("📊 [ArticlesSection.fetchCategories] Categories response:", responseCategories);
+          console.log("📈 [ArticlesSection.fetchCategories] Categories count:", responseCategories?.length || 0);
           
-          if (supabaseCategories.length > 0) {
-            console.log("✅ [fetchCategories] ใช้ข้อมูลจาก Supabase");
-            setCategories(supabaseCategories);
-          } else {
-            // ถ้า Supabase ไม่มีข้อมูล ลองใช้ backend API
-            console.log("🔄 [fetchCategories] Supabase ว่างเปล่า ลองใช้ backend API...");
-            const responseCategories = await categoriesAPI.getAll();
+          if (responseCategories && responseCategories.length > 0) {
+            console.log("✅ [ArticlesSection.fetchCategories] Successfully fetched categories");
             setCategories(responseCategories);
+          } else {
+            console.log("❌ [ArticlesSection.fetchCategories] No categories found");
+            setCategories([]);
           }
           
           setIsFirstTimeRender(false);
         } catch (error) {
-          console.log("❌ [fetchCategories] API error:", error);
-          // ใช้ข้อมูล fallback ถ้า API ล้มเหลว
-          const fallbackCategories = [
-            { id: 1, name: "Dev" },
-            { id: 2, name: "LifeStyle" },
-            { id: 3, name: "General" }
-          ];
-          setCategories(fallbackCategories);
+          console.log("❌ [ArticlesSection.fetchCategories] API error:", error);
+          console.log("💥 [ArticlesSection.fetchCategories] Error stack:", error.stack);
+          setCategories([]);
+          setApiError(true);
           setIsFirstTimeRender(false);
         }
       };
@@ -180,155 +89,115 @@ export default function Articles() {
     const fetchPosts = async () => {
       setIsLoading(true); // เริ่มโหลด
       try {
-        console.log("🔄 [fetchPosts] กำลังดึงข้อมูลโพสต์...");
+        console.log("🔄 [ArticlesSection.fetchPosts] กำลังดึงข้อมูลโพสต์...");
+        console.log("📋 [ArticlesSection.fetchPosts] Parameters:", { page, category });
         
-        // ลองใช้ Supabase ก่อน
-        const supabasePosts = await fetchPostsFromSupabase();
+        // หา category_id จาก category name
+        let categoryId = null;
+        if (category !== "Highlight") {
+          const selectedCat = categories.find(cat => cat.name === category);
+          categoryId = selectedCat?.id || null;
+          console.log("📁 [ArticlesSection.fetchPosts] Selected category:", { name: category, id: categoryId });
+        }
         
-        if (supabasePosts.length > 0) {
-          console.log("✅ [fetchPosts] ใช้ข้อมูลจาก Supabase");
+        // ใช้ postsAPI.getAll() ซึ่งจะเรียก Supabase service และมี console.log ครบถ้วน
+        const response = await postsAPI.getAll({ 
+          page, 
+          limit: 6,
+          categoryId: categoryId 
+        });
+        
+        console.log("📊 [ArticlesSection.fetchPosts] API Response:", response);
+        console.log("📈 [ArticlesSection.fetchPosts] Posts count:", response?.posts?.length || 0);
+        console.log("📈 [ArticlesSection.fetchPosts] Total count:", response?.totalCount || 0);
+        
+        if (response && response.posts) {
+          console.log("✅ [ArticlesSection.fetchPosts] Successfully got posts from API");
+          console.log("🔍 [ArticlesSection.fetchPosts] First post sample:", response.posts[0]);
           
-          // กรองตามหมวดหมู่ถ้าไม่ใช่ Highlight
-          let filteredPosts = supabasePosts;
-          if (category !== "Highlight") {
-            console.log(`🔍 [fetchPosts] กำลังกรองตามหมวดหมู่ ${category}...`);
-            console.log(`🔍 [fetchPosts] โพสต์ทั้งหมดก่อนกรอง:`, supabasePosts.map(p => ({ title: p.title, category: p.category })));
+          // แปลงข้อมูลให้ตรงกับรูปแบบที่ BlogCard ต้องการ
+          const transformedPosts = response.posts.map((post) => {
+            // ดึงชื่อ category จาก nested object
+            const categoryName = post.categories?.name || 'General';
             
-            filteredPosts = supabasePosts.filter(post => 
-              post.category === category
-            );
-            console.log(`🔍 [fetchPosts] กรองตามหมวดหมู่ ${category}:`, filteredPosts.map(p => ({ title: p.title, category: p.category })));
-          } else {
-            console.log("🔍 [fetchPosts] แสดงครบทุกโพสต์ (Highlight):", filteredPosts);
-          }
+            return {
+              id: post.id,
+              title: post.title,
+              description: post.description,
+              content: post.content,
+              image: post.image,
+              category: categoryName,
+              author: 'Naiyana T.', // ตั้งค่าเริ่มต้น
+              date: post.date || post.created_at,
+              likes: post.likes_count || 0
+            };
+          });
+          
+          console.log("🔄 [ArticlesSection.fetchPosts] Transformed posts:", transformedPosts);
           
           if (page === 1) {
-            setPosts(filteredPosts); // แทนที่โพสต์ในหน้าแรก
+            setPosts(transformedPosts); // แทนที่โพสต์ในหน้าแรก
           } else {
-            setPosts((prevPosts) => [...prevPosts, ...filteredPosts]); // เพิ่มโพสต์ในหน้าถัดไป
+            setPosts((prevPosts) => [...prevPosts, ...transformedPosts]); // เพิ่มโพสต์ในหน้าถัดไป
           }
           
           // ตรวจสอบว่ามีโพสต์เพิ่มเติมหรือไม่
-          if (filteredPosts.length < 10) { // สมมติว่าแต่ละหน้าแสดง 10 โพสต์
-            setHasMore(false);
-          }
+          setHasMore(response.hasMore || false);
         } else {
-          // ถ้า Supabase ไม่มีข้อมูล ลองใช้ backend API
-          console.log("🔄 [fetchPosts] Supabase ว่างเปล่า ลองใช้ backend API...");
-          const response = await postsAPI.getAll();
-          console.log("🔍 [fetchPosts] Backend API response:", response);
-          console.log("🔍 [fetchPosts] Response type:", typeof response);
-          console.log("🔍 [fetchPosts] Response keys:", response ? Object.keys(response) : "null");
-          console.log("🔍 [fetchPosts] Response.posts:", response?.posts);
-          console.log("🔍 [fetchPosts] Response is array:", Array.isArray(response));
-          
-          // ตรวจสอบว่า backend API มีข้อมูลหรือไม่
-          const backendPosts = response.posts || response;
-          if (backendPosts && backendPosts.length > 0) {
-            console.log("✅ [fetchPosts] ใช้ข้อมูลจาก Backend API");
-            
-            // กรองตามหมวดหมู่ถ้าไม่ใช่ Highlight
-            let filteredBackendPosts = backendPosts;
-            if (category !== "Highlight") {
-              filteredBackendPosts = backendPosts.filter(post => 
-                post.category === category
-              );
-              console.log(`🔍 [fetchPosts] กรอง Backend API ตามหมวดหมู่ ${category}:`, filteredBackendPosts);
-            } else {
-              console.log("🔍 [fetchPosts] แสดงครบทุกโพสต์ Backend API (Highlight):", filteredBackendPosts);
-            }
-            
-            if (page === 1) {
-              console.log("🔍 [fetchPosts] Setting posts (page 1):", filteredBackendPosts);
-              setPosts(filteredBackendPosts);
-            } else {
-              console.log("🔍 [fetchPosts] Adding posts (page > 1):", filteredBackendPosts);
-              setPosts((prevPosts) => [...prevPosts, ...filteredBackendPosts]);
-            }
-            if (response.currentPage >= response.totalPages) {
-              setHasMore(false);
-            }
-          } else {
-            console.log("❌ [fetchPosts] Backend API ว่างเปล่า ใช้ข้อมูล mock");
-            // ใช้ข้อมูล mock จาก blogPosts.js
-            let filteredMockPosts = blogPosts;
-            if (category !== "Highlight") {
-              filteredMockPosts = blogPosts.filter(post => 
-                post.category === category
-              );
-              console.log(`🔍 [fetchPosts] กรอง Mock data ตามหมวดหมู่ ${category}:`, filteredMockPosts);
-            } else {
-              console.log("🔍 [fetchPosts] แสดงครบทุกโพสต์ Mock data (Highlight):", filteredMockPosts);
-            }
-            setPosts(filteredMockPosts);
-            setHasMore(false);
-          }
+          console.log("❌ [ArticlesSection.fetchPosts] No posts data in response");
+          setPosts([]);
+          setHasMore(false);
         }
         
         setIsLoading(false);
       } catch (error) {
-        console.log("❌ [fetchPosts] Posts API error:", error);
-        // ใช้ข้อมูล fallback ถ้า API ล้มเหลว
-        let filteredFallbackPosts = blogPosts;
-        if (category !== "Highlight") {
-          filteredFallbackPosts = blogPosts.filter(post => 
-            post.category === category
-          );
-          console.log(`🔍 [fetchPosts] กรอง Fallback data ตามหมวดหมู่ ${category}:`, filteredFallbackPosts);
-        } else {
-          console.log("🔍 [fetchPosts] แสดงครบทุกโพสต์ Fallback data (Highlight):", filteredFallbackPosts);
-        }
-        setPosts(filteredFallbackPosts);
+        console.log("❌ [ArticlesSection.fetchPosts] Posts API error:", error);
+        console.log("💥 [ArticlesSection.fetchPosts] Error stack:", error.stack);
+        setPosts([]);
+        setApiError(true);
         setIsLoading(false);
       }
     };
 
     fetchPosts(); // เรียก fetchPosts เมื่อหน้า หรือหมวดหมู่เปลี่ยน
-  }, [page, category]); // Effect ขึ้นอยู่กับ page และ category
+  }, [page, category, refreshTrigger, categories]); // Effect ขึ้นอยู่กับ page, category, refreshTrigger และ categories
 
   useEffect(() => {
     if (searchKeyword.length > 0) {
       setIsLoading(true);
       
-      // If using fallback data, search locally
-      if (useFallbackData) {
-        debugComponent("ArticlesSection", "Searching in fallback data");
-        const filteredPosts = blogPosts.filter(post => 
-          post.title.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-          post.description.toLowerCase().includes(searchKeyword.toLowerCase())
-        );
-        setSuggestions(filteredPosts);
-        setIsLoading(false);
-        return;
-      }
-      
       const fetchSuggestions = async () => {
         try {
-          console.log("🔄 [fetchSuggestions] กำลังค้นหาโพสต์...");
+          console.log("🔄 [ArticlesSection.fetchSuggestions] กำลังค้นหาโพสต์:", searchKeyword);
           
-          // ลองใช้ Supabase ก่อน
-          const supabasePosts = await fetchPostsFromSupabase();
+          // ใช้ postsAPI.getAll() พร้อมกับ keyword parameter
+          const response = await postsAPI.getAll({ 
+            page: 1, 
+            limit: 10,
+            keyword: searchKeyword 
+          });
           
-          if (supabasePosts.length > 0) {
-            console.log("✅ [fetchSuggestions] ใช้ข้อมูลจาก Supabase");
-            // กรองโพสต์ตามคำค้นหา
-            const filteredPosts = supabasePosts.filter(post => 
-              post.title.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-              post.description.toLowerCase().includes(searchKeyword.toLowerCase())
-            );
-            setSuggestions(filteredPosts);
+          console.log("📊 [ArticlesSection.fetchSuggestions] Search response:", response);
+          
+          if (response && response.posts) {
+            console.log("✅ [ArticlesSection.fetchSuggestions] Found posts:", response.posts.length);
+            // แปลงข้อมูลให้ตรงกับรูปแบบที่ใช้
+            const transformedSuggestions = response.posts.map((post) => ({
+              id: post.id,
+              title: post.title,
+              description: post.description,
+              category: post.categories?.name || 'General',
+            }));
+            setSuggestions(transformedSuggestions);
           } else {
-            // ถ้า Supabase ไม่มีข้อมูล ลองใช้ backend API
-            console.log("🔄 [fetchSuggestions] Supabase ว่างเปล่า ลองใช้ backend API...");
-            const response = await postsAPI.getAll();
-            setSuggestions(response.posts || response);
+            console.log("❌ [ArticlesSection.fetchSuggestions] No results");
+            setSuggestions([]);
           }
           
           setIsLoading(false);
         } catch (error) {
-          console.log("❌ [fetchSuggestions] Search API error:", error);
-          // ใช้ข้อมูล fallback สำหรับการค้นหา
-          setSuggestions(blogPosts);
+          console.log("❌ [ArticlesSection.fetchSuggestions] Search API error:", error);
+          setSuggestions([]);
           setIsLoading(false);
         }
       };
@@ -337,7 +206,7 @@ export default function Articles() {
     } else {
       setSuggestions([]); // ล้างคำแนะนำถ้าคำค้นหาว่าง
     }
-  }, [searchKeyword, useFallbackData]);
+  }, [searchKeyword]);
 
   const handleLoadMore = () => {
     setPage((prevPage) => prevPage + 1); // Increment page number to load more posts
@@ -345,7 +214,7 @@ export default function Articles() {
 
   // Retry API connection
   const retryConnection = () => {
-    debugComponent("ArticlesSection", "Retrying API connection");
+    console.log("🔄 [ArticlesSection.retryConnection] Retrying API connection");
     setUseFallbackData(false);
     setApiError(false);
     setIsFirstTimeRender(true);
@@ -488,14 +357,37 @@ export default function Articles() {
         {console.log("🔍 [ArticlesSection] Posts is array:", Array.isArray(posts))}
         {posts.length === 0 ? (
           <div className="col-span-2 text-center py-8">
-            
-            <p className="text-sm text-muted-foreground mt-2">
-              กำลังโหลดข้อมูลจาก Supabase และ Backend API...
-            </p>
+            {isLoading ? (
+              <div className="flex flex-col items-center">
+                <Loader2 className="w-8 h-8 animate-spin text-foreground mb-4" />
+                <p className="text-sm text-muted-foreground">
+                  กำลังโหลดข้อมูลจาก Supabase และ Backend API...
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center">
+                <p className="text-lg font-medium text-muted-foreground mb-2">
+                  ไม่พบข้อมูลโพสต์
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  กรุณาตรวจสอบการเชื่อมต่อ API หรือ Supabase
+                </p>
+              </div>
+            )}
           </div>
         ) : (
           posts.map((blog, index) => {
             console.log("🔍 [ArticlesSection] Rendering blog:", blog);
+            console.log("📊 [ArticlesSection] Blog data details:", {
+              id: blog.id,
+              title: blog.title,
+              category: blog.category,
+              author: blog.author,
+              date: blog.date,
+              hasImage: !!blog.image,
+              hasDescription: !!blog.description
+            });
+            
             return (
               <BlogCard
                 key={index}
@@ -510,6 +402,14 @@ export default function Articles() {
                   month: "long",
                   year: "numeric",
                 })}
+                debugInfo={{
+                  originalData: blog,
+                  transformedDate: new Date(blog.date).toLocaleDateString("en-GB", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })
+                }}
               />
             );
           })
