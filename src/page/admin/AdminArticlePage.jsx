@@ -52,6 +52,14 @@ export default function AdminArticleManagementPage() {
         console.log("🔧 [AdminArticlePage] Supabase client:", supabase);
         console.log("🔧 [AdminArticlePage] Supabase URL:", supabase.supabaseUrl);
         
+        // Check if user is authenticated
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        if (authError) {
+          console.error("❌ [AdminArticlePage] Auth error:", authError);
+          throw authError;
+        }
+        console.log("👤 [AdminArticlePage] Current user:", user);
+        
         // Fetch posts from Supabase using postsService with all posts
         console.log("🔄 [AdminArticlePage] Attempting to fetch from posts table using postsService...");
         const { data: postsData, error: postsError } = await postsService.getPosts({
@@ -73,15 +81,31 @@ export default function AdminArticleManagementPage() {
 
         console.log("✅ [AdminArticlePage] Posts service response:", postsData);
         
-        // Extract posts from service response
+        // Extract posts from service response and transform data
         const actualPosts = postsData?.posts || [];
         console.log("📊 [AdminArticlePage] Posts count:", actualPosts?.length || 0);
         console.log("📊 [AdminArticlePage] Total count:", postsData?.totalCount || 0);
         
         if (actualPosts && actualPosts.length > 0) {
           console.log("📝 [AdminArticlePage] First post:", actualPosts[0]);
-          setPosts(actualPosts);
-          setFilteredPosts(actualPosts);
+          
+          // Transform posts data to match expected format
+          const transformedPosts = actualPosts.map(post => ({
+            id: post.id,
+            title: post.title,
+            description: post.description,
+            content: post.content,
+            image: post.image,
+            category: post.categories?.name || 'General',
+            status: post.status_id === 2 ? 'published' : 'draft',
+            author: post.author_id || 'Admin',
+            date: post.date,
+            likes_count: post.likes_count || 0
+          }));
+          
+          console.log("🔄 [AdminArticlePage] Transformed posts:", transformedPosts);
+          setPosts(transformedPosts);
+          setFilteredPosts(transformedPosts);
         } else {
           console.log("⚠️ [AdminArticlePage] No posts found in database, using mock data");
           
@@ -144,12 +168,9 @@ export default function AdminArticleManagementPage() {
           setFilteredPosts(mockPosts);
         }
 
-        // Fetch categories from Supabase
+        // Fetch categories from Supabase using categoriesService
         console.log("🔄 [AdminArticlePage] Fetching categories from Supabase...");
-        const { data: categoriesData, error: categoriesError } = await supabase
-          .from('categories')
-          .select('*')
-          .order('id', { ascending: true });
+        const { data: categoriesData, error: categoriesError } = await categoriesService.getCategories();
 
         console.log("🔍 [AdminArticlePage] Raw categories response:", { categoriesData, categoriesError });
 
@@ -289,10 +310,7 @@ export default function AdminArticleManagementPage() {
       setIsLoading(true);
       console.log("🔄 [AdminArticlePage] Deleting post from Supabase:", postId);
       
-      const { error } = await supabase
-        .from('posts')
-        .delete()
-        .eq('id', postId);
+      const { error } = await postsService.deletePost(postId);
 
       if (error) {
         console.error("❌ [AdminArticlePage] Delete error:", error);
@@ -300,6 +318,13 @@ export default function AdminArticleManagementPage() {
       }
 
       console.log("✅ [AdminArticlePage] Post deleted successfully");
+      
+      // Dispatch event เพื่อบอก components อื่นว่ามีการลบข้อมูล
+      window.dispatchEvent(new CustomEvent('postsUpdated', { 
+        detail: { postId, action: 'delete' } 
+      }));
+      console.log("📡 [AdminArticlePage] Dispatched postsUpdated event (delete)");
+      
       toast.custom((t) => (
         <div className="bg-green-500 text-white p-4 rounded-sm flex justify-between items-start">
           <div>

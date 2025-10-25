@@ -13,9 +13,9 @@ import {
 } from "@/components/ui/select";
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { Textarea } from "@/components/ui/textarea";
-import axios from "axios"; // Make sure axios is installed
 import { useAuth } from "@/contexts/authentication";
 import { toast } from "sonner";
+import { postsService } from "@/services/supabaseService";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
@@ -31,7 +31,7 @@ import { supabase } from "@/lib/supabase";
 export default function AdminEditArticlePage() {
   const { state } = useAuth();
   const navigate = useNavigate();
-  const { postId } = useParams(); // Get postId from the URL
+  const { id: postId } = useParams(); // Get id from the URL and rename to postId
   const [post, setPost] = useState({
     id: null,
     image: "",
@@ -56,6 +56,22 @@ export default function AdminEditArticlePage() {
       try {
         setIsLoading(true);
         console.log("🔄 [AdminEditArticle] Fetching post and categories from Supabase...");
+        console.log("📋 [AdminEditArticle] Post ID from URL (raw):", postId);
+        console.log("📋 [AdminEditArticle] Post ID type:", typeof postId);
+        
+        // Validate and convert postId to integer
+        if (!postId || postId === 'undefined') {
+          console.error("❌ [AdminEditArticle] Invalid post ID:", postId);
+          throw new Error('Invalid post ID');
+        }
+        
+        const postIdInt = parseInt(postId, 10);
+        if (isNaN(postIdInt)) {
+          console.error("❌ [AdminEditArticle] Post ID is not a valid number:", postId);
+          throw new Error('Post ID must be a number');
+        }
+        
+        console.log("✅ [AdminEditArticle] Post ID (converted to int):", postIdInt);
         
         // Fetch categories from Supabase
         const { data: categoriesData, error: categoriesError } = await supabase
@@ -71,11 +87,14 @@ export default function AdminEditArticlePage() {
         console.log("✅ [AdminEditArticle] Categories data:", categoriesData);
         setCategories(categoriesData || []);
 
-        // Fetch post from Supabase
+        // Fetch post from Supabase with category information
         const { data: postData, error: postError } = await supabase
           .from('posts')
-          .select('*')
-          .eq('id', postId)
+          .select(`
+            *,
+            categories(id, name)
+          `)
+          .eq('id', postIdInt)
           .single();
 
         if (postError) {
@@ -84,7 +103,16 @@ export default function AdminEditArticlePage() {
         }
 
         console.log("✅ [AdminEditArticle] Post data:", postData);
-        setPost(postData);
+        
+        // Transform data to include category name
+        const transformedPost = {
+          ...postData,
+          category: postData.categories?.name || '',
+          category_id: postData.category_id
+        };
+        
+        console.log("🔄 [AdminEditArticle] Transformed post:", transformedPost);
+        setPost(transformedPost);
       } catch (error) {
         console.error("💥 [AdminEditArticle] Fetch error:", error);
         toast.custom((t) => (
@@ -114,6 +142,7 @@ export default function AdminEditArticlePage() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    console.log(`📝 [AdminEditArticle] Input changed - ${name}:`, value);
     setPost((prevData) => ({
       ...prevData,
       [name]: value,
@@ -122,6 +151,10 @@ export default function AdminEditArticlePage() {
 
   const handleCategoryChange = (value) => {
     const selectedCategory = categories.find((cat) => cat.name === value);
+    console.log("📁 [AdminEditArticle] Category changed:", { 
+      categoryName: value, 
+      categoryId: selectedCategory?.id 
+    });
     setPost((prevData) => ({
       ...prevData,
       category: value, // The category name
@@ -131,30 +164,47 @@ export default function AdminEditArticlePage() {
 
   const handleSave = async (postStatusId) => {
     setIsSaving(true);
+    
+    const postIdInt = parseInt(postId, 10);
+    
+    console.log("💾 [AdminEditArticle] Starting save process...");
+    console.log("📋 [AdminEditArticle] Post data to save:", {
+      postId: postIdInt,
+      title: post.title,
+      category_id: post.category_id,
+      status_id: postStatusId,
+      hasNewImage: !!imageFile?.file
+    });
 
     try {
       if (imageFile?.file) {
         // If the image has been changed, use FormData
-        const formData = new FormData();
-        formData.append("title", post.title);
-        formData.append("category_id", post.category_id);
-        formData.append("description", post.description);
-        formData.append("content", post.content);
-        formData.append("status_id", postStatusId);
-        formData.append("imageFile", imageFile.file);
-
-        console.log("🔄 [AdminEditArticle] Updating post in Supabase with new image...");
+        console.log("🖼️ [AdminEditArticle] Updating post with new image...");
+        console.log("📁 [AdminEditArticle] Image file:", {
+          name: imageFile.file.name,
+          size: imageFile.file.size,
+          type: imageFile.file.type
+        });
+        
+        // TODO: Upload image to Supabase Storage first
+        // For now, keeping existing image URL
+        
+        const updateData = {
+          title: post.title,
+          description: post.description,
+          content: post.content,
+          image: post.image, // Keep existing image for now
+          category_id: post.category_id,
+          status_id: postStatusId
+        };
+        
+        console.log("🔄 [AdminEditArticle] Update data:", updateData);
         
         const { data, error } = await supabase
           .from('posts')
-          .update({
-            title: post.title,
-            description: post.description,
-            content: post.content,
-            image: post.image,
-            category_id: post.category_id
-          })
-          .eq('id', postId);
+          .update(updateData)
+          .eq('id', postIdInt)
+          .select();
 
         if (error) {
           console.error("❌ [AdminEditArticle] Update error:", error);
@@ -164,19 +214,24 @@ export default function AdminEditArticlePage() {
         console.log("✅ [AdminEditArticle] Post updated successfully:", data);
       } else {
         // If the image is not changed, use the old method
-        console.log("🔄 [AdminEditArticle] Updating post in Supabase without image change...");
+        console.log("📝 [AdminEditArticle] Updating post without image change...");
+        
+        const updateData = {
+          title: post.title,
+          image: post.image, // Existing image URL
+          category_id: post.category_id,
+          description: post.description,
+          content: post.content,
+          status_id: postStatusId,
+        };
+        
+        console.log("🔄 [AdminEditArticle] Update data:", updateData);
         
         const { data, error } = await supabase
           .from('posts')
-          .update({
-            title: post.title,
-            image: post.image, // Existing image URL
-            category_id: post.category_id,
-            description: post.description,
-            content: post.content,
-          status_id: postStatusId,
-        })
-        .eq('id', postId);
+          .update(updateData)
+          .eq('id', postIdInt)
+          .select();
 
         if (error) {
           console.error("❌ [AdminEditArticle] Update error:", error);
@@ -186,7 +241,16 @@ export default function AdminEditArticlePage() {
         console.log("✅ [AdminEditArticle] Post updated successfully:", data);
       }
 
+      // Dispatch event เพื่อบอก components อื่นว่ามีการอัพเดทข้อมูล
+      window.dispatchEvent(new CustomEvent('postsUpdated', { 
+        detail: { postId: postIdInt, action: 'update' } 
+      }));
+      console.log("📡 [AdminEditArticle] Dispatched postsUpdated event");
+
       // Success toast
+      const statusText = postStatusId === 1 ? "draft" : postStatusId === 2 ? "published" : "unknown";
+      console.log(`🎉 [AdminEditArticle] Article updated successfully as ${statusText}`);
+      
       toast.custom((t) => (
         <div className="bg-green-500 text-white p-4 rounded-sm flex justify-between items-start">
           <div>
@@ -195,9 +259,9 @@ export default function AdminEditArticlePage() {
             </h2>
             <p className="text-sm">
               {postStatusId === 1
-                ? "Your article has been successfully published."
-                : postStatusId === 2
                 ? "Your article has been successfully saved as draft."
+                : postStatusId === 2
+                ? "Your article has been successfully published."
                 : ""}
             </p>
           </div>
@@ -209,8 +273,11 @@ export default function AdminEditArticlePage() {
           </button>
         </div>
       ));
+      
+      console.log("🔄 [AdminEditArticle] Navigating to article management...");
       navigate("/admin/article-management"); // Redirect after saving
-    } catch {
+    } catch (error) {
+      console.error("💥 [AdminEditArticle] Save error:", error);
       // Error toast
       toast.custom((t) => (
         <div className="bg-red-500 text-white p-4 rounded-sm flex justify-between items-start">
@@ -236,8 +303,26 @@ export default function AdminEditArticlePage() {
 
   const handleDelete = async (postId) => {
     try {
+      const postIdInt = parseInt(postId, 10);
+      console.log("🔄 [AdminEditArticle] Deleting post:", postIdInt);
+      
+      const { error } = await postsService.deletePost(postIdInt);
+      
+      if (error) {
+        console.error("❌ [AdminEditArticle] Delete error:", error);
+        throw error;
+      }
+      
+      console.log("✅ [AdminEditArticle] Post deleted successfully");
+      
+      // Dispatch event เพื่อบอก components อื่นว่ามีการลบข้อมูล
+      window.dispatchEvent(new CustomEvent('postsUpdated', { 
+        detail: { postId: postIdInt, action: 'delete' } 
+      }));
+      console.log("📡 [AdminEditArticle] Dispatched postsUpdated event (delete)");
+      
       navigate("/admin/article-management");
-      await postsAPI.delete(postId);
+      
       toast.custom((t) => (
         <div className="bg-green-500 text-white p-4 rounded-sm flex justify-between items-start">
           <div>

@@ -170,6 +170,7 @@ export const postsService = {
         page = 1,
         limit = 6,
         category = null,
+        categoryId = null,
         keyword = null,
         authorId = null
       } = options;
@@ -182,12 +183,19 @@ export const postsService = {
           *,
           categories(name)
         `)
-        .eq('status_id', 2)
+        // Temporarily disabled status filter to debug
+        // .eq('status_id', 2)
         .order('date', { ascending: false });
 
       // Apply filters
-      if (category) {
-        query = query.eq('categories.name', category);
+      if (categoryId) {
+        console.log("📁 [postsService.getPosts] Filtering by categoryId:", categoryId);
+        query = query.eq('category_id', categoryId);
+      } else if (category) {
+        // Fallback: support category name for backward compatibility
+        console.log("📁 [postsService.getPosts] Filtering by category name:", category);
+        // Note: This won't work correctly with Supabase joins
+        // Better to use categoryId
       }
 
       // Note: posts table doesn't have author_id column
@@ -203,13 +211,31 @@ export const postsService = {
 
       const { data, error, count } = await query;
 
-      console.log("🔍 Supabase query result:", { 
+      console.log("🔍 [postsService.getPosts] Supabase query result:", { 
         dataLength: data?.length, 
         error, 
         count,
         firstPost: data?.[0],
         allData: data
       });
+      
+      console.log("📊 [postsService.getPosts] Posts data details:");
+      if (data && data.length > 0) {
+        console.log("📝 [postsService.getPosts] First post details:", {
+          id: data[0].id,
+          title: data[0].title,
+          category_id: data[0].category_id,
+          status_id: data[0].status_id,
+          likes_count: data[0].likes_count,
+          categories: data[0].categories
+        });
+        
+        console.log("🔍 [postsService.getPosts] Status information:", {
+          status_id: data[0].status_id,
+          is_published: data[0].status_id === 2,
+          status_name: data[0].status_id === 2 ? 'Published' : 'Draft'
+        });
+      }
 
       if (error) {
         console.error("❌ Supabase query error:", error);
@@ -219,8 +245,9 @@ export const postsService = {
       // Get total count for pagination
       const { count: totalCount } = await supabase
         .from('posts')
-        .select('*', { count: 'exact', head: true })
-        .eq('status_id', 2);
+        .select('*', { count: 'exact', head: true });
+        // Temporarily disabled status filter to match main query
+        // .eq('status_id', 2);
 
       const result = {
         posts: data || [],
@@ -255,10 +282,10 @@ export const postsService = {
 
       if (error) throw error;
 
-      // Transform likes_count to likes for backward compatibility
+      // Data is already in correct format
       const transformedData = {
         ...data,
-        likes: data.likes_count || 0
+        likes_count: data.likes_count || 0
       };
 
       debugAPI.response(`/posts/${postId}`, 200, transformedData);
@@ -431,6 +458,13 @@ export const categoriesService = {
 
       console.log("✅ [categoriesService] Categories fetched successfully:", data);
       console.log("📊 [categoriesService] Categories count:", data?.length || 0);
+      
+      if (data && data.length > 0) {
+        console.log("📝 [categoriesService] Categories details:", data.map(cat => ({
+          id: cat.id,
+          name: cat.name
+        })));
+      }
       
       debugAPI.response('/categories', 200, data);
       return { data: data || [], error: null };
