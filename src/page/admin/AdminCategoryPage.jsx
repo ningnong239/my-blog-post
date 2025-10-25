@@ -73,6 +73,36 @@ export default function AdminCategoryManagementPage() {
     fetchCategories();
   }, [navigate]);
 
+  // Listen for categoriesUpdated event
+  useEffect(() => {
+    const handleCategoriesUpdate = async (event) => {
+      console.log("📡 [AdminCategoryPage] Received categoriesUpdated event:", event.detail);
+      
+      try {
+        // Refetch categories when event is received
+        console.log("🔄 [AdminCategoryPage] Refetching categories...");
+        const { data: categoriesData, error: categoriesError } = await categoriesService.getCategories();
+
+        if (categoriesError) {
+          console.error("❌ [AdminCategoryPage] Categories refetch error:", categoriesError);
+          return;
+        }
+
+        console.log("✅ [AdminCategoryPage] Categories refetched:", categoriesData);
+        console.log("📊 [AdminCategoryPage] New categories count:", categoriesData?.length || 0);
+        setCategories(categoriesData || []);
+      } catch (error) {
+        console.error("💥 [AdminCategoryPage] Error refetching categories:", error);
+      }
+    };
+
+    window.addEventListener('categoriesUpdated', handleCategoriesUpdate);
+    
+    return () => {
+      window.removeEventListener('categoriesUpdated', handleCategoriesUpdate);
+    };
+  }, []);
+
   useEffect(() => {
     const filtered = categories.filter((category) =>
       category.name.toLowerCase().includes(searchKeyword.toLowerCase())
@@ -94,6 +124,13 @@ export default function AdminCategoryManagementPage() {
       }
 
       console.log("✅ [AdminCategoryPage] Category deleted successfully");
+      
+      // Dispatch event เพื่อบอก components อื่นว่ามีการลบ category
+      window.dispatchEvent(new CustomEvent('categoriesUpdated', { 
+        detail: { categoryId, action: 'delete' } 
+      }));
+      console.log("📡 [AdminCategoryPage] Dispatched categoriesUpdated event (delete)");
+      
       toast.custom((t) => (
         <div className="bg-green-500 text-white p-4 rounded-sm flex justify-between items-start">
           <div>

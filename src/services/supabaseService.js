@@ -266,28 +266,43 @@ export const postsService = {
   },
 
   // Get post by ID
-  async getPostById(postId) {
+  async getPostById(postId, forceRefresh = false) {
     try {
+      console.log("📖 [postsService.getPostById] Fetching post:", postId, forceRefresh ? "(FORCE REFRESH)" : "");
       debugAPI.request(`/posts/${postId}`, 'GET');
       
+      const postIdInt = parseInt(postId, 10);
+      
+      // Always fetch fresh data from database
       const { data, error } = await supabase
         .from('posts')
         .select(`
           *,
           categories(name)
         `)
-        .eq('id', postId)
+        .eq('id', postIdInt)
         .eq('status_id', 2)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("❌ [postsService.getPostById] Error:", error);
+        throw error;
+      }
 
-      // Data is already in correct format
+      console.log("✅ [postsService.getPostById] Raw data from DB:", data);
+      console.log("📊 [postsService.getPostById] Current likes_count from DB:", data.likes_count);
+      console.log("🔍 [postsService.getPostById] Full data structure:", JSON.stringify(data, null, 2));
+
+      // Transform data to match expected format
       const transformedData = {
         ...data,
-        likes_count: data.likes_count || 0
+        category: data.categories?.name || '',
+        likes: data.likes_count || 0,        // Map likes_count to likes
+        likes_count: data.likes_count || 0   // Keep original field too
       };
 
+      console.log("🔄 [postsService.getPostById] Transformed data:", transformedData);
+      console.log("📊 [postsService.getPostById] Transformed likes_count:", transformedData.likes_count);
       debugAPI.response(`/posts/${postId}`, 200, transformedData);
       return { data: transformedData, error: null };
     } catch (error) {
@@ -368,17 +383,41 @@ export const postsService = {
   // Like post
   async likePost(postId) {
     try {
+      console.log("👍 [postsService.likePost] Incrementing likes for post:", postId);
       debugAPI.request(`/posts/${postId}/like`, 'POST');
       
+      // Convert postId to integer
+      const postIdInt = parseInt(postId, 10);
+      
+      // Get current post data first
+      const { data: currentPost, error: fetchError } = await supabase
+        .from('posts')
+        .select('likes_count')
+        .eq('id', postIdInt)
+        .single();
+      
+      if (fetchError) {
+        console.error("❌ [postsService.likePost] Fetch error:", fetchError);
+        throw fetchError;
+      }
+      
+      console.log("📊 [postsService.likePost] Current likes:", currentPost.likes_count);
+      
+      // Update with incremented value
+      const newLikesCount = (currentPost.likes_count || 0) + 1;
       const { data, error } = await supabase
         .from('posts')
-        .update({ likes_count: supabase.raw('likes_count + 1') })
-        .eq('id', postId)
+        .update({ likes_count: newLikesCount })
+        .eq('id', postIdInt)
         .select('likes_count')
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("❌ [postsService.likePost] Update error:", error);
+        throw error;
+      }
 
+      console.log("✅ [postsService.likePost] New likes:", data.likes_count);
       debugAPI.response(`/posts/${postId}/like`, 200, data);
       return { data, error: null };
     } catch (error) {
@@ -390,17 +429,41 @@ export const postsService = {
   // Unlike post
   async unlikePost(postId) {
     try {
+      console.log("👎 [postsService.unlikePost] Decrementing likes for post:", postId);
       debugAPI.request(`/posts/${postId}/unlike`, 'DELETE');
       
+      // Convert postId to integer
+      const postIdInt = parseInt(postId, 10);
+      
+      // Get current post data first
+      const { data: currentPost, error: fetchError } = await supabase
+        .from('posts')
+        .select('likes_count')
+        .eq('id', postIdInt)
+        .single();
+      
+      if (fetchError) {
+        console.error("❌ [postsService.unlikePost] Fetch error:", fetchError);
+        throw fetchError;
+      }
+      
+      console.log("📊 [postsService.unlikePost] Current likes:", currentPost.likes_count);
+      
+      // Update with decremented value (minimum 0)
+      const newLikesCount = Math.max((currentPost.likes_count || 0) - 1, 0);
       const { data, error } = await supabase
         .from('posts')
-        .update({ likes_count: supabase.raw('likes_count - 1') })
-        .eq('id', postId)
+        .update({ likes_count: newLikesCount })
+        .eq('id', postIdInt)
         .select('likes_count')
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("❌ [postsService.unlikePost] Update error:", error);
+        throw error;
+      }
 
+      console.log("✅ [postsService.unlikePost] New likes:", data.likes_count);
       debugAPI.response(`/posts/${postId}/unlike`, 200, data);
       return { data, error: null };
     } catch (error) {
