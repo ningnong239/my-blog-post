@@ -161,8 +161,8 @@ export const postsAPI = {
   },
 
   // Get post by ID
-  getById: async (id) => {
-    const result = await postsService.getPostById(id);
+  getById: async (id, forceRefresh = false) => {
+    const result = await postsService.getPostById(id, forceRefresh);
     
     if (result.error) {
       throw new Error(result.error.message || 'Failed to fetch post');

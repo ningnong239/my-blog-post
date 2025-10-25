@@ -48,20 +48,28 @@ export default function ViewPost() {
   useEffect(() => {
     getPost();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [param.postId]); // Re-fetch when postId changes
 
   const getPost = async () => {
     setIsLoading(true);
     try {
+      console.log("🔄 [ViewPost] Fetching post data for ID:", param.postId);
+      
       // Get post data from Supabase
       const postsResponse = await postsAPI.getById(param.postId);
+      console.log("✅ [ViewPost] Post data received:", postsResponse);
+      
       setImg(postsResponse.image);
       setTitle(postsResponse.title);
       setDate(postsResponse.date);
       setDescription(postsResponse.description);
       setCategory(postsResponse.category);
       setContent(postsResponse.content);
-      setLikes(postsResponse.likes || 0); // Use likes from post data
+      
+      // Use likes_count (the actual field in Supabase)
+      const currentLikes = postsResponse.likes_count || postsResponse.likes || 0;
+      console.log("👍 [ViewPost] Current likes count:", currentLikes);
+      setLikes(currentLikes);
       
       // Get comments from Supabase
       const commentsResult = await postsService.getComments?.(param.postId);
@@ -77,7 +85,7 @@ export default function ViewPost() {
       
       setIsLoading(false);
     } catch (error) {
-      console.log("Post API error:", error);
+      console.error("💥 [ViewPost] Post API error:", error);
       // Use fallback post from mock data if API fails
       const fallbackPost = blogPosts.find(post => post.id === parseInt(param.postId)) || blogPosts[0];
       setImg(fallbackPost.image);
@@ -90,6 +98,22 @@ export default function ViewPost() {
       setComments([]); // No comments for fallback data
       setUseFallbackData(true); // Set fallback data flag
       setIsLoading(false);
+    }
+  };
+
+  // Function to refresh only likes count (without reloading entire post)
+  const refreshLikesCount = async () => {
+    try {
+      console.log("🔄 [ViewPost] Refreshing likes count for post:", param.postId);
+      // Force refresh to get the latest value from database
+      const postsResponse = await postsAPI.getById(param.postId, true);
+      const currentLikes = postsResponse.likes_count || postsResponse.likes || 0;
+      console.log("✅ [ViewPost] Refreshed likes count:", currentLikes);
+      setLikes(currentLikes);
+      return currentLikes;
+    } catch (error) {
+      console.error("💥 [ViewPost] Failed to refresh likes:", error);
+      return null;
     }
   };
 
@@ -137,6 +161,7 @@ export default function ViewPost() {
             setDialogState={setIsDialogOpen}
             user={user}
             setLikes={setLikes}
+            refreshLikesCount={refreshLikesCount}
           />
           <Comment
             setDialogState={setIsDialogOpen}
@@ -161,7 +186,7 @@ export default function ViewPost() {
   );
 }
 
-function Share({ likesAmount, setDialogState, user, setLikes }) {
+function Share({ likesAmount, setDialogState, user, setLikes, refreshLikesCount }) {
   const shareLink = encodeURI(window.location.href);
   const param = useParams();
   const [isLiking, setIsLiking] = useState(false);
@@ -173,24 +198,34 @@ function Share({ likesAmount, setDialogState, user, setLikes }) {
 
     setIsLiking(true);
     try {
+      console.log("👍 [ViewPost] User clicked like button for post:", param.postId);
+      
       // Try to like the post using Supabase
       const likeResult = await postsService.likePost(param.postId);
       
       if (likeResult.error) {
-        // If like fails, try to unlike (assuming it's already liked)
-        const unlikeResult = await postsService.unlikePost(param.postId);
-        if (unlikeResult.error) {
-          throw unlikeResult.error;
-        }
+        console.error("❌ [ViewPost] Like error:", likeResult.error);
+        throw likeResult.error;
       }
 
-      // Get updated like count
-      const likesResult = await postsService.getPostLikes(param.postId);
-      if (likesResult.data) {
-        setLikes(likesResult.data.like_count);
+      console.log("✅ [ViewPost] Like successful! Result:", likeResult.data);
+
+      // Refresh likes count from database to get the actual current value
+      if (refreshLikesCount) {
+        await refreshLikesCount();
+      } else if (likeResult.data && likeResult.data.likes_count !== undefined) {
+        // Fallback: Update from result
+        console.log("✅ [ViewPost] Updated likes from result:", likeResult.data.likes_count);
+        setLikes(likeResult.data.likes_count);
       }
+      
+      // Show success toast
+      toast.success("Liked! 👍");
     } catch (error) {
-      console.error("Error handling like:", error);
+      console.error("💥 [ViewPost] Error handling like:", error);
+      // Show error toast
+      toast.error("Failed to like post. Please try again.");
+      
       // If Supabase fails, try external API as fallback
       try {
         await axios.post(
@@ -201,7 +236,7 @@ function Share({ likesAmount, setDialogState, user, setLikes }) {
         );
         setLikes(likesResponse.data.like_count);
       } catch (apiError) {
-        console.error("External API also failed:", apiError);
+        console.error("💥 [ViewPost] External API also failed:", apiError);
         // If all APIs fail, just increment locally
         setLikes(prevLikes => prevLikes + 1);
       }
@@ -504,7 +539,11 @@ function CreateAccountModal({ dialogState, setDialogState }) {
           Create an account to continue
         </AlertDialogTitle>
           <button
-            onClick={() => navigate("/sign-up")}
+            onClick={() => {
+              console.log("🔄 [CreateAccountModal] Navigating to signup page");
+              navigate("/signup");
+              setDialogState(false);
+            }}
             className="rounded-full text-white bg-foreground hover:bg-muted-foreground transition-colors py-4 text-lg w-52"
           >
           Create account
@@ -512,7 +551,11 @@ function CreateAccountModal({ dialogState, setDialogState }) {
         <AlertDialogDescription className="flex flex-row gap-1 justify-center font-medium text-center pt-2 text-muted-foreground">
           Already have an account?
           <a
-            onClick={() => navigate("/login")}
+            onClick={() => {
+              console.log("🔄 [CreateAccountModal] Navigating to login page");
+              navigate("/login");
+              setDialogState(false);
+            }}
             className="text-foreground hover:text-muted-foreground transition-colors underline font-semibold cursor-pointer"
           >
             Log in
