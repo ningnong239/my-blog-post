@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/authentication";
 import { toast } from "sonner";
-import axios from "axios";
+import { supabase } from "@/lib/supabase";
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -120,21 +120,27 @@ export default function ProfilePage() {
     try {
       setIsSaving(true);
 
-      const formData = new FormData();
-      formData.append("name", profile.name);
-      formData.append("username", profile.username);
+      console.log("🔄 [ProfilePage] Updating profile with Supabase...");
+      console.log("📤 [ProfilePage] Profile data:", profile);
 
-      if (imageFile) {
-        formData.append("imageFile", imageFile);
+      // Update user metadata in Supabase
+      const { data, error } = await supabase.auth.updateUser({
+        data: {
+          full_name: profile.name,
+          username: profile.username,
+          avatar_url: profile.image
+        }
+      });
+
+      if (error) {
+        console.error("❌ [ProfilePage] Supabase update error:", error);
+        throw new Error(error.message);
       }
 
-      await axios.put(
-        "http://localhost:4001/profile",
-        formData,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-        }
-      );
+      console.log("✅ [ProfilePage] Profile updated successfully:", data);
+
+      // Refresh user data
+      await fetchUser();
 
       toast.custom((t) => (
         <div className="bg-green-500 text-white p-4 rounded-sm flex justify-between items-start">
@@ -152,12 +158,13 @@ export default function ProfilePage() {
           </button>
         </div>
       ));
-    } catch {
+    } catch (error) {
+      console.error("💥 [ProfilePage] Profile update error:", error);
       toast.custom((t) => (
         <div className="bg-red-500 text-white p-4 rounded-sm flex justify-between items-start">
           <div>
             <h2 className="font-bold text-lg mb-1">Failed to update profile</h2>
-            <p className="text-sm">Please try again later.</p>
+            <p className="text-sm">{error.message || "Please try again later."}</p>
           </div>
           <button
             onClick={() => toast.dismiss(t)}
@@ -169,7 +176,6 @@ export default function ProfilePage() {
       ));
     } finally {
       setIsSaving(false);
-      fetchUser();
     }
   };
 

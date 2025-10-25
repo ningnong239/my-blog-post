@@ -25,6 +25,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { supabase } from "@/lib/supabase";
 
 //this component is not finished yet
 export default function AdminEditArticlePage() {
@@ -54,15 +55,38 @@ export default function AdminEditArticlePage() {
     const fetchPost = async () => {
       try {
         setIsLoading(true);
-        const responseCategories = await axios.get(
-          "http://localhost:4001/categories"
-        );
-        setCategories(responseCategories.data);
-        const response = await axios.get(
-          `http://localhost:4001/posts/admin/${postId}`
-        );
-        setPost(response.data);
-      } catch {
+        console.log("🔄 [AdminEditArticle] Fetching post and categories from Supabase...");
+        
+        // Fetch categories from Supabase
+        const { data: categoriesData, error: categoriesError } = await supabase
+          .from('categories')
+          .select('*')
+          .order('id', { ascending: true });
+
+        if (categoriesError) {
+          console.error("❌ [AdminEditArticle] Categories error:", categoriesError);
+          throw categoriesError;
+        }
+
+        console.log("✅ [AdminEditArticle] Categories data:", categoriesData);
+        setCategories(categoriesData || []);
+
+        // Fetch post from Supabase
+        const { data: postData, error: postError } = await supabase
+          .from('posts')
+          .select('*')
+          .eq('id', postId)
+          .single();
+
+        if (postError) {
+          console.error("❌ [AdminEditArticle] Post error:", postError);
+          throw postError;
+        }
+
+        console.log("✅ [AdminEditArticle] Post data:", postData);
+        setPost(postData);
+      } catch (error) {
+        console.error("💥 [AdminEditArticle] Fetch error:", error);
         toast.custom((t) => (
           <div className="bg-red-500 text-white p-4 rounded-sm flex justify-between items-start">
             <div>
@@ -119,26 +143,47 @@ export default function AdminEditArticlePage() {
         formData.append("status_id", postStatusId);
         formData.append("imageFile", imageFile.file);
 
-        await axios.put(
-          `http://localhost:4001/posts/${postId}`,
-          formData,
-          {
-            headers: { "Content-Type": "multipart/form-data" },
-          }
-        );
+        console.log("🔄 [AdminEditArticle] Updating post in Supabase with new image...");
+        
+        const { data, error } = await supabase
+          .from('posts')
+          .update({
+            title: post.title,
+            description: post.description,
+            content: post.content,
+            image: post.image,
+            category_id: post.category_id
+          })
+          .eq('id', postId);
+
+        if (error) {
+          console.error("❌ [AdminEditArticle] Update error:", error);
+          throw error;
+        }
+
+        console.log("✅ [AdminEditArticle] Post updated successfully:", data);
       } else {
         // If the image is not changed, use the old method
-        await axios.put(
-          `http://localhost:4001/posts/${postId}`,
-          {
+        console.log("🔄 [AdminEditArticle] Updating post in Supabase without image change...");
+        
+        const { data, error } = await supabase
+          .from('posts')
+          .update({
             title: post.title,
             image: post.image, // Existing image URL
             category_id: post.category_id,
             description: post.description,
             content: post.content,
-            status_id: postStatusId,
-          }
-        );
+          status_id: postStatusId,
+        })
+        .eq('id', postId);
+
+        if (error) {
+          console.error("❌ [AdminEditArticle] Update error:", error);
+          throw error;
+        }
+
+        console.log("✅ [AdminEditArticle] Post updated successfully:", data);
       }
 
       // Success toast
@@ -192,9 +237,7 @@ export default function AdminEditArticlePage() {
   const handleDelete = async (postId) => {
     try {
       navigate("/admin/article-management");
-      await axios.delete(
-        `http://localhost:4001/posts/${postId}`
-      );
+      await postsAPI.delete(postId);
       toast.custom((t) => (
         <div className="bg-green-500 text-white p-4 rounded-sm flex justify-between items-start">
           <div>

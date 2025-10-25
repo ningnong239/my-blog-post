@@ -1,11 +1,8 @@
+// API Configuration
+export const API_BASE_URL = 'https://myblogpostserver.vercel.app';
+
 // Import Supabase services
-import { 
-  authService, 
-  postsService, 
-  categoriesService, 
-  commentsService,
-  initializeDatabase 
-} from '@/services/supabaseService';
+import { postsService, categoriesService } from '@/services/supabaseService';
 
 // Legacy API endpoints (for backward compatibility)
 export const API_ENDPOINTS = {
@@ -29,101 +26,111 @@ export const API_ENDPOINTS = {
   PROFILE_AVATAR: '/profile/avatar',
 };
 
-// Default options for API requests
-const defaultOptions = {
-  headers: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-  },
-};
+// API Helper Functions
+export const apiRequest = async (url, options = {}) => {
+  console.log("🔍 [apiRequest] URL:", url);
+  console.log("📦 [apiRequest] Options:", options);
 
-// Generic API request function (Legacy - now uses Supabase)
-const apiRequest = async (url, options = {}) => {
-  console.warn('⚠️ Legacy API request detected. Consider using Supabase services directly.');
-  
-  // For backward compatibility, we'll try to map to Supabase services
-  if (url.includes('/auth/')) {
-    throw new Error('Please use authService from @/services/supabaseService instead of legacy API');
+  const defaultOptions = {
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+  };
+
+  // Add Authorization header if token exists
+  const token = localStorage.getItem('token');
+  if (token) {
+    defaultOptions.headers.Authorization = `Bearer ${token}`;
+    console.log("🔑 [apiRequest] Token found:", token.substring(0, 20) + "...");
+  } else {
+    console.log("❌ [apiRequest] No token found");
   }
-  
-  if (url.includes('/posts')) {
-    throw new Error('Please use postsService from @/services/supabaseService instead of legacy API');
+
+  const config = {
+    ...defaultOptions,
+    ...options,
+    headers: {
+      ...defaultOptions.headers,
+      ...options.headers,
+    },
+  };
+
+  try {
+    console.log('🚀 [apiRequest] Making API request to:', url);
+    console.log('⚙️ [apiRequest] Request config:', config);
+    console.log('📝 [apiRequest] Request body:', config.body);
+    
+    const response = await fetch(url, config);
+    console.log('📡 [apiRequest] Response status:', response.status);
+    console.log('📋 [apiRequest] Response headers:', Object.fromEntries(response.headers.entries()));
+    
+    const data = await response.json();
+    console.log('📨 [apiRequest] Response data:', data);
+
+    if (!response.ok) {
+      console.error('❌ [apiRequest] API Error Response:', data);
+      console.error('🔍 [apiRequest] Full error details:', {
+        status: response.status,
+        statusText: response.statusText,
+        url: url,
+        body: config.body
+      });
+      throw new Error(data.error || `HTTP error! status: ${response.status}`);
+    }
+
+    console.log('✅ [apiRequest] API request successful');
+    return data;
+  } catch (error) {
+    console.error('💥 [apiRequest] API Request Error:', error);
+    throw error;
   }
-  
-  if (url.includes('/categories')) {
-    throw new Error('Please use categoriesService from @/services/supabaseService instead of legacy API');
-  }
-  
-  throw new Error('Legacy API not supported. Please use Supabase services.');
 };
 
 // Auth API Functions (Now using Supabase)
 export const authAPI = {
   // Register user
   register: async (userData) => {
-    const { email, password, full_name } = userData;
-    const result = await authService.signUp(email, password, full_name);
-    
-    if (result.error) {
-      throw new Error(result.error.message || 'Registration failed');
-    }
-    
-    return {
-      user: result.data.user,
-      access_token: result.data.session?.access_token
-    };
+    console.log("📝 [authAPI.register] User data:", userData);
+    return apiRequest(API_ENDPOINTS.REGISTER, {
+      method: 'POST',
+      body: JSON.stringify(userData),
+    });
   },
 
   // Login user
   login: async (email, password) => {
-    const result = await authService.signIn(email, password);
-    
-    if (result.error) {
-      throw new Error(result.error.message || 'Login failed');
-    }
-    
-    return {
-      user: result.data.user,
-      access_token: result.data.session?.access_token
-    };
+    console.log("🔐 [authAPI.login] Email:", email);
+    console.log("🔐 [authAPI.login] Password:", password);
+    return apiRequest(API_ENDPOINTS.LOGIN, {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
   },
 
   // Get user info
   getUser: async () => {
-    const result = await authService.getCurrentUser();
-    
-    if (result.error) {
-      throw new Error(result.error.message || 'Failed to get user');
-    }
-    
-    if (!result.data) {
-      throw new Error('No user found');
-    }
-    
-    // Get user profile
-    const profileResult = await authService.getUserProfile(result.data.id);
-    
-    return {
-      ...result.data,
-      ...profileResult.data
-    };
+    console.log("👤 [authAPI.getUser] Fetching user data...");
+    return apiRequest(API_ENDPOINTS.GET_USER, {
+      method: 'GET',
+    });
   },
 
   // Logout user
   logout: async () => {
-    const result = await authService.signOut();
-    
-    if (result.error) {
-      throw new Error(result.error.message || 'Logout failed');
-    }
-    
-    return { success: true };
+    console.log("🚪 [authAPI.logout] Logging out user...");
+    return apiRequest(API_ENDPOINTS.LOGOUT, {
+      method: 'POST',
+    });
   },
 
   // Reset password
-  resetPassword: async (email) => {
-    // Note: This would need to be implemented with Supabase Auth
-    throw new Error('Password reset not implemented yet');
+  resetPassword: async (passwordData) => {
+    console.log("🔄 [authAPI.resetPassword] Password data:", passwordData);
+    return apiRequest(API_ENDPOINTS.RESET_PASSWORD, {
+      method: 'PUT',
+      body: JSON.stringify(passwordData),
+    });
   },
 };
 
@@ -131,18 +138,31 @@ export const authAPI = {
 export const postsAPI = {
   // Get all posts
   getAll: async (params = {}) => {
-    const result = await postsService.getPosts(params);
+    console.log("🚀 [postsAPI.getAll] Starting API call with params:", params);
     
-    if (result.error) {
-      throw new Error(result.error.message || 'Failed to fetch posts');
+    try {
+      const result = await postsService.getPosts(params);
+      console.log("📊 [postsAPI.getAll] Supabase service result:", result);
+      
+      if (result.error) {
+        console.error("❌ [postsAPI.getAll] Supabase service error:", result.error);
+        throw new Error(result.error.message || 'Failed to fetch posts');
+      }
+      
+      console.log("✅ [postsAPI.getAll] Successfully fetched posts:", result.data);
+      console.log("📈 [postsAPI.getAll] Posts count:", result.data?.posts?.length || 0);
+      console.log("📈 [postsAPI.getAll] Total count:", result.data?.totalCount || 0);
+      
+      return result.data;
+    } catch (error) {
+      console.error("💥 [postsAPI.getAll] API call failed:", error);
+      throw error;
     }
-    
-    return result.data;
   },
 
   // Get post by ID
-  getById: async (id) => {
-    const result = await postsService.getPostById(id);
+  getById: async (id, forceRefresh = false) => {
+    const result = await postsService.getPostById(id, forceRefresh);
     
     if (result.error) {
       throw new Error(result.error.message || 'Failed to fetch post');
@@ -153,24 +173,80 @@ export const postsAPI = {
 
   // Create post (Admin only)
   create: async (postData) => {
-    const result = await postsService.createPost(postData);
-    
-    if (result.error) {
-      throw new Error(result.error.message || 'Failed to create post');
+    const token = localStorage.getItem('token');
+    const config = {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: postData,
+    };
+
+    try {
+      console.log('Making API request to:', API_ENDPOINTS.POSTS);
+      console.log('Request config:', config);
+      
+      const response = await fetch(API_ENDPOINTS.POSTS, config);
+      console.log('Response status:', response.status);
+      
+      const data = await response.json();
+      console.log('Response data:', data);
+
+      if (!response.ok) {
+        console.error('API Error Response:', data);
+        throw new Error(data.error || `HTTP error! status: ${response.status}`);
+      }
+
+      console.log('API request successful');
+      return data;
+    } catch (error) {
+      console.error('API Request Error:', error);
+      throw error;
     }
-    
-    return result.data;
   },
 
   // Update post (Admin only)
   update: async (id, postData) => {
-    const result = await postsService.updatePost(id, postData);
+    const token = localStorage.getItem('token');
     
-    if (result.error) {
-      throw new Error(result.error.message || 'Failed to update post');
+    // Check if postData is FormData
+    if (postData instanceof FormData) {
+      const config = {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: postData,
+      };
+
+      try {
+        console.log('Making API request to:', API_ENDPOINTS.POST_BY_ID(id));
+        console.log('Request config:', config);
+        
+        const response = await fetch(API_ENDPOINTS.POST_BY_ID(id), config);
+        console.log('Response status:', response.status);
+        
+        const data = await response.json();
+        console.log('Response data:', data);
+
+        if (!response.ok) {
+          console.error('API Error Response:', data);
+          throw new Error(data.error || `HTTP error! status: ${response.status}`);
+        }
+
+        console.log('API request successful');
+        return data;
+      } catch (error) {
+        console.error('API Request Error:', error);
+        throw error;
+      }
+    } else {
+      // For JSON data, use the regular apiRequest function
+      return apiRequest(API_ENDPOINTS.POST_BY_ID(id), {
+        method: 'PUT',
+        body: JSON.stringify(postData),
+      });
     }
-    
-    return result.data;
   },
 
   // Delete post (Admin only)
@@ -189,13 +265,25 @@ export const postsAPI = {
 export const categoriesAPI = {
   // Get all categories
   getAll: async () => {
-    const result = await categoriesService.getCategories();
+    console.log("🚀 [categoriesAPI.getAll] Starting categories API call");
     
-    if (result.error) {
-      throw new Error(result.error.message || 'Failed to fetch categories');
+    try {
+      const result = await categoriesService.getCategories();
+      console.log("📊 [categoriesAPI.getAll] Supabase service result:", result);
+      
+      if (result.error) {
+        console.error("❌ [categoriesAPI.getAll] Supabase service error:", result.error);
+        throw new Error(result.error.message || 'Failed to fetch categories');
+      }
+      
+      console.log("✅ [categoriesAPI.getAll] Successfully fetched categories:", result.data);
+      console.log("📈 [categoriesAPI.getAll] Categories count:", result.data?.length || 0);
+      
+      return result.data;
+    } catch (error) {
+      console.error("💥 [categoriesAPI.getAll] API call failed:", error);
+      throw error;
     }
-    
-    return result.data;
   },
 
   // Get category by ID
@@ -247,31 +335,64 @@ export const categoriesAPI = {
 export const profileAPI = {
   // Update profile
   update: async (profileData) => {
-    // Get current user
-    const { data: { user } } = await authService.getCurrentUser();
-    if (!user) throw new Error('No user found');
+    const token = localStorage.getItem('token');
     
-    const result = await authService.updateProfile(user.id, profileData);
-    
-    if (result.error) {
-      throw new Error(result.error.message || 'Failed to update profile');
+    // Check if profileData is FormData
+    if (profileData instanceof FormData) {
+      const config = {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: profileData,
+      };
+
+      try {
+        console.log('Making API request to:', API_ENDPOINTS.PROFILE);
+        console.log('Request config:', config);
+        
+        const response = await fetch(API_ENDPOINTS.PROFILE, config);
+        console.log('Response status:', response.status);
+        
+        const data = await response.json();
+        console.log('Response data:', data);
+
+        if (!response.ok) {
+          console.error('API Error Response:', data);
+          throw new Error(data.error || `HTTP error! status: ${response.status}`);
+        }
+
+        console.log('API request successful');
+        return data;
+      } catch (error) {
+        console.error('API Request Error:', error);
+        throw error;
+      }
+    } else {
+      // For JSON data, use the regular apiRequest function
+      return apiRequest(API_ENDPOINTS.PROFILE, {
+        method: 'PUT',
+        body: JSON.stringify(profileData),
+      });
     }
-    
-    return result.data;
   },
 
-  // Upload avatar
-  uploadAvatar: async (avatarFile) => {
-    // This would need to be implemented with Supabase Storage
-    throw new Error('Avatar upload not implemented yet');
+  // Upload avatar (User only)
+  uploadAvatar: async (formData) => {
+    const token = localStorage.getItem('token');
+    return fetch(API_ENDPOINTS.UPLOAD_AVATAR, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    }).then(response => response.json());
   },
 };
 
 // Export Supabase services for direct use
 export { 
   authService, 
-  postsService, 
-  categoriesService, 
   commentsService,
   initializeDatabase 
 } from '@/services/supabaseService';

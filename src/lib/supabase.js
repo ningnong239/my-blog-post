@@ -1,10 +1,9 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Supabase configuration
+// Supabase project credentials
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://rxlmkbwpfruzzvnlgqtr.supabase.co'
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4bG1rYndwZnJ1enp2bmxncXRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NzQ1NzQsImV4cCI6MjA3NjA1MDU3NH0.f94b1dijSybhscyx1tCaO6faCoDqNQTKsolesCMFhqo'
 
-// Create Supabase client
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // Service role client for admin operations (server-side only)
@@ -14,7 +13,12 @@ export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
 // Debug function
 export const debugSupabase = () => {
   console.log('🔧 Supabase Configuration:');
-  console.log('URL:', supabaseUrl);
-  console.log('Anon Key:', supabaseAnonKey ? '✅ Set' : '❌ Missing');
-  console.log('Service Key:', supabaseServiceKey ? '✅ Set' : '❌ Missing');
+  console.log('Environment:', import.meta.env.MODE);
+  console.log('URL from env:', import.meta.env.VITE_SUPABASE_URL);
+  console.log('URL fallback:', supabaseUrl);
+  console.log('Anon Key from env:', import.meta.env.VITE_SUPABASE_ANON_KEY ? '✅ Set' : '❌ Missing');
+  console.log('Anon Key fallback:', supabaseAnonKey ? '✅ Set' : '❌ Missing');
+  console.log('Service Key from env:', import.meta.env.SUPABASE_SERVICE_ROLE_KEY ? '✅ Set' : '❌ Missing');
+  console.log('Service Key fallback:', supabaseServiceKey ? '✅ Set' : '❌ Missing');
+  console.log('All env vars:', import.meta.env);
 }

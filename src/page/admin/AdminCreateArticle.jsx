@@ -11,11 +11,12 @@ import {
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/authentication";
-import axios from "axios";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabase";
+import { categoriesService, postsService } from "@/services/supabaseService";
 
 export default function AdminCreateArticlePage() {
   const { state } = useAuth();
@@ -25,10 +26,9 @@ export default function AdminCreateArticlePage() {
     category_id: null,
     title: "",
     description: "",
-    date: null,
     content: "",
-    status_id: null,
-  }); // Store the fetched post data
+    status_id: 1, // 1 = draft, 2 = published
+  }); // Store the post data
   const [isLoading, setIsLoading] = useState(null);
   const [isSaving, setIsSaving] = useState(null);
   const [categories, setCategories] = useState([]);
@@ -38,10 +38,17 @@ export default function AdminCreateArticlePage() {
     const fetchCategories = async () => {
       try {
         setIsLoading(true);
-        const responseCategories = await axios.get(
-          "http://localhost:4001/categories"
-        );
-        setCategories(responseCategories.data);
+        console.log("🔄 [AdminCreateArticle] Fetching categories from Supabase...");
+        
+        const { data: categoriesData, error: categoriesError } = await categoriesService.getCategories();
+
+        if (categoriesError) {
+          console.error("❌ [AdminCreateArticle] Categories error:", categoriesError);
+          throw categoriesError;
+        }
+
+        console.log("✅ [AdminCreateArticle] Categories data:", categoriesData);
+        setCategories(categoriesData || []);
       } catch (error) {
         console.error("Error fetching categories data:", error);
         navigate("*");
@@ -51,7 +58,36 @@ export default function AdminCreateArticlePage() {
     };
 
     fetchCategories();
-  }, [navigate]); // Re-fetch if postId changes
+  }, [navigate]);
+
+  // Listen for categoriesUpdated event
+  useEffect(() => {
+    const handleCategoriesUpdate = async (event) => {
+      console.log("📡 [AdminCreateArticle] Received categoriesUpdated event:", event.detail);
+      
+      try {
+        // Refetch categories when event is received
+        console.log("🔄 [AdminCreateArticle] Refetching categories...");
+        const { data: categoriesData, error: categoriesError } = await categoriesService.getCategories();
+
+        if (categoriesError) {
+          console.error("❌ [AdminCreateArticle] Categories refetch error:", categoriesError);
+          return;
+        }
+
+        console.log("✅ [AdminCreateArticle] Categories refetched:", categoriesData);
+        setCategories(categoriesData || []);
+      } catch (error) {
+        console.error("💥 [AdminCreateArticle] Error refetching categories:", error);
+      }
+    };
+
+    window.addEventListener('categoriesUpdated', handleCategoriesUpdate);
+    
+    return () => {
+      window.removeEventListener('categoriesUpdated', handleCategoriesUpdate);
+    };
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -70,25 +106,48 @@ export default function AdminCreateArticlePage() {
     }));
   };
 
-  const handleSave = async (postStatusId) => {
+  const handleSave = async (statusId) => {
     setIsSaving(true);
-    const formData = new FormData();
-
-    formData.append("title", post.title);
-    formData.append("category_id", post.category_id);
-    formData.append("description", post.description);
-    formData.append("content", post.content);
-    formData.append("status_id", postStatusId);
-    formData.append("imageFile", imageFile.file);
 
     try {
-      await axios.post(
-        "http://localhost:4001/posts",
-        formData,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-        }
-      );
+      console.log("🔄 [AdminCreateArticle] Creating post in Supabase...");
+      console.log("📤 [AdminCreateArticle] Post data:", post);
+      
+      // Get current user
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError) {
+        console.error("❌ [AdminCreateArticle] Auth error:", authError);
+        throw authError;
+      }
+
+      // Prepare post data
+      const postData = {
+        title: post.title,
+        description: post.description,
+        content: post.content,
+        image: post.image || null,
+        category_id: post.category_id,
+        status_id: statusId,
+        likes_count: 0,
+        date: new Date().toISOString()
+      };
+
+      console.log("📤 [AdminCreateArticle] Post data to insert:", postData);
+      
+      const { data, error } = await postsService.createPost(postData);
+
+      if (error) {
+        console.error("❌ [AdminCreateArticle] Create error:", error);
+        throw error;
+      }
+
+      console.log("✅ [AdminCreateArticle] Post created successfully:", data);
+
+      // Dispatch event เพื่อบอก components อื่นว่ามีโพสต์ใหม่
+      window.dispatchEvent(new CustomEvent('postsUpdated', { 
+        detail: { postId: data?.id, action: 'create' } 
+      }));
+      console.log("📡 [AdminCreateArticle] Dispatched postsUpdated event (create)");
 
       toast.custom((t) => (
         <div className="bg-green-500 text-white p-4 rounded-sm flex justify-between items-start">
@@ -97,11 +156,9 @@ export default function AdminCreateArticlePage() {
               Created article successfully
             </h2>
             <p className="text-sm">
-              {postStatusId === 1
+              {statusId === 2
                 ? "Your article has been successfully published."
-                : postStatusId === 2
-                ? "Your article has been successfully saved as draft."
-                : ""}
+                : "Your article has been successfully saved as draft."}
             </p>
           </div>
           <button
@@ -136,7 +193,7 @@ export default function AdminCreateArticlePage() {
     }
   };
 
-  const handleFileChange = (event) => {
+  const handleFileChange = async (event) => {
     const file = event.target.files[0]; // Get the selected file
 
     // Check if the file is an image
@@ -189,7 +246,57 @@ export default function AdminCreateArticlePage() {
       return;
     }
 
-    setImageFile({ file }); // Store the file object
+    try {
+      // Upload to Supabase Storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `posts/${fileName}`;
+
+      console.log("🔄 [AdminCreateArticle] Uploading image to Supabase Storage...");
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('images')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        console.error("❌ [AdminCreateArticle] Upload error:", uploadError);
+        throw uploadError;
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('images')
+        .getPublicUrl(filePath);
+
+      console.log("✅ [AdminCreateArticle] Image uploaded successfully:", publicUrl);
+      
+      // Update post state with image URL
+      setPost(prev => ({
+        ...prev,
+        image: publicUrl
+      }));
+      
+      setImageFile({ file, url: publicUrl }); // Store both file and URL
+      
+    } catch (error) {
+      console.error("💥 [AdminCreateArticle] Image upload error:", error);
+      toast.custom((t) => (
+        <div className="bg-red-500 text-white p-4 rounded-sm flex justify-between items-start">
+          <div>
+            <h2 className="font-bold text-lg mb-1">Failed to upload image</h2>
+            <p className="text-sm">
+              Something went wrong while uploading the image. Please try again.
+            </p>
+          </div>
+          <button
+            onClick={() => toast.dismiss(t)}
+            className="text-white hover:text-gray-200"
+          >
+            <X size={20} />
+          </button>
+        </div>
+      ));
+    }
   };
   return (
     <div className="flex h-screen bg-gray-100">
@@ -231,9 +338,9 @@ export default function AdminCreateArticlePage() {
                 Thumbnail image
               </label>
               <div className="flex items-end space-x-4">
-                {imageFile.file ? (
+                {imageFile.url || imageFile.file ? (
                   <img
-                    src={URL.createObjectURL(imageFile.file)}
+                    src={imageFile.url || URL.createObjectURL(imageFile.file)}
                     alt="Uploaded"
                     className="rounded-md object-cover max-w-lg h-80"
                   />

@@ -170,6 +170,7 @@ export const postsService = {
         page = 1,
         limit = 6,
         category = null,
+        categoryId = null,
         keyword = null,
         authorId = null
       } = options;
@@ -182,12 +183,19 @@ export const postsService = {
           *,
           categories(name)
         `)
-        .eq('status_id', 2)
+        // Temporarily disabled status filter to debug
+        // .eq('status_id', 2)
         .order('date', { ascending: false });
 
       // Apply filters
-      if (category) {
-        query = query.eq('categories.name', category);
+      if (categoryId) {
+        console.log("📁 [postsService.getPosts] Filtering by categoryId:", categoryId);
+        query = query.eq('category_id', categoryId);
+      } else if (category) {
+        // Fallback: support category name for backward compatibility
+        console.log("📁 [postsService.getPosts] Filtering by category name:", category);
+        // Note: This won't work correctly with Supabase joins
+        // Better to use categoryId
       }
 
       // Note: posts table doesn't have author_id column
@@ -203,13 +211,31 @@ export const postsService = {
 
       const { data, error, count } = await query;
 
-      console.log("🔍 Supabase query result:", { 
+      console.log("🔍 [postsService.getPosts] Supabase query result:", { 
         dataLength: data?.length, 
         error, 
         count,
         firstPost: data?.[0],
         allData: data
       });
+      
+      console.log("📊 [postsService.getPosts] Posts data details:");
+      if (data && data.length > 0) {
+        console.log("📝 [postsService.getPosts] First post details:", {
+          id: data[0].id,
+          title: data[0].title,
+          category_id: data[0].category_id,
+          status_id: data[0].status_id,
+          likes_count: data[0].likes_count,
+          categories: data[0].categories
+        });
+        
+        console.log("🔍 [postsService.getPosts] Status information:", {
+          status_id: data[0].status_id,
+          is_published: data[0].status_id === 2,
+          status_name: data[0].status_id === 2 ? 'Published' : 'Draft'
+        });
+      }
 
       if (error) {
         console.error("❌ Supabase query error:", error);
@@ -219,8 +245,9 @@ export const postsService = {
       // Get total count for pagination
       const { count: totalCount } = await supabase
         .from('posts')
-        .select('*', { count: 'exact', head: true })
-        .eq('status_id', 2);
+        .select('*', { count: 'exact', head: true });
+        // Temporarily disabled status filter to match main query
+        // .eq('status_id', 2);
 
       const result = {
         posts: data || [],
@@ -239,24 +266,45 @@ export const postsService = {
   },
 
   // Get post by ID
-  async getPostById(postId) {
+  async getPostById(postId, forceRefresh = false) {
     try {
+      console.log("📖 [postsService.getPostById] Fetching post:", postId, forceRefresh ? "(FORCE REFRESH)" : "");
       debugAPI.request(`/posts/${postId}`, 'GET');
       
+      const postIdInt = parseInt(postId, 10);
+      
+      // Always fetch fresh data from database
       const { data, error } = await supabase
         .from('posts')
         .select(`
           *,
           categories(name)
         `)
-        .eq('id', postId)
+        .eq('id', postIdInt)
         .eq('status_id', 2)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("❌ [postsService.getPostById] Error:", error);
+        throw error;
+      }
 
-      debugAPI.response(`/posts/${postId}`, 200, data);
-      return { data, error: null };
+      console.log("✅ [postsService.getPostById] Raw data from DB:", data);
+      console.log("📊 [postsService.getPostById] Current likes_count from DB:", data.likes_count);
+      console.log("🔍 [postsService.getPostById] Full data structure:", JSON.stringify(data, null, 2));
+
+      // Transform data to match expected format
+      const transformedData = {
+        ...data,
+        category: data.categories?.name || '',
+        likes: data.likes_count || 0,        // Map likes_count to likes
+        likes_count: data.likes_count || 0   // Keep original field too
+      };
+
+      console.log("🔄 [postsService.getPostById] Transformed data:", transformedData);
+      console.log("📊 [postsService.getPostById] Transformed likes_count:", transformedData.likes_count);
+      debugAPI.response(`/posts/${postId}`, 200, transformedData);
+      return { data: transformedData, error: null };
     } catch (error) {
       debugError(error, 'postsService.getPostById');
       return { data: null, error };
@@ -335,21 +383,112 @@ export const postsService = {
   // Like post
   async likePost(postId) {
     try {
+      console.log("👍 [postsService.likePost] Incrementing likes for post:", postId);
       debugAPI.request(`/posts/${postId}/like`, 'POST');
       
+      // Convert postId to integer
+      const postIdInt = parseInt(postId, 10);
+      
+      // Get current post data first
+      const { data: currentPost, error: fetchError } = await supabase
+        .from('posts')
+        .select('likes_count')
+        .eq('id', postIdInt)
+        .single();
+      
+      if (fetchError) {
+        console.error("❌ [postsService.likePost] Fetch error:", fetchError);
+        throw fetchError;
+      }
+      
+      console.log("📊 [postsService.likePost] Current likes:", currentPost.likes_count);
+      
+      // Update with incremented value
+      const newLikesCount = (currentPost.likes_count || 0) + 1;
       const { data, error } = await supabase
         .from('posts')
-        .update({ likes: supabase.raw('likes + 1') })
-        .eq('id', postId)
-        .select('likes')
+        .update({ likes_count: newLikesCount })
+        .eq('id', postIdInt)
+        .select('likes_count')
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("❌ [postsService.likePost] Update error:", error);
+        throw error;
+      }
 
+      console.log("✅ [postsService.likePost] New likes:", data.likes_count);
       debugAPI.response(`/posts/${postId}/like`, 200, data);
       return { data, error: null };
     } catch (error) {
       debugError(error, 'postsService.likePost');
+      return { data: null, error };
+    }
+  },
+
+  // Unlike post
+  async unlikePost(postId) {
+    try {
+      console.log("👎 [postsService.unlikePost] Decrementing likes for post:", postId);
+      debugAPI.request(`/posts/${postId}/unlike`, 'DELETE');
+      
+      // Convert postId to integer
+      const postIdInt = parseInt(postId, 10);
+      
+      // Get current post data first
+      const { data: currentPost, error: fetchError } = await supabase
+        .from('posts')
+        .select('likes_count')
+        .eq('id', postIdInt)
+        .single();
+      
+      if (fetchError) {
+        console.error("❌ [postsService.unlikePost] Fetch error:", fetchError);
+        throw fetchError;
+      }
+      
+      console.log("📊 [postsService.unlikePost] Current likes:", currentPost.likes_count);
+      
+      // Update with decremented value (minimum 0)
+      const newLikesCount = Math.max((currentPost.likes_count || 0) - 1, 0);
+      const { data, error } = await supabase
+        .from('posts')
+        .update({ likes_count: newLikesCount })
+        .eq('id', postIdInt)
+        .select('likes_count')
+        .single();
+
+      if (error) {
+        console.error("❌ [postsService.unlikePost] Update error:", error);
+        throw error;
+      }
+
+      console.log("✅ [postsService.unlikePost] New likes:", data.likes_count);
+      debugAPI.response(`/posts/${postId}/unlike`, 200, data);
+      return { data, error: null };
+    } catch (error) {
+      debugError(error, 'postsService.unlikePost');
+      return { data: null, error };
+    }
+  },
+
+  // Get post likes count
+  async getPostLikes(postId) {
+    try {
+      debugAPI.request(`/posts/${postId}/likes`, 'GET');
+      
+      const { data, error } = await supabase
+        .from('posts')
+        .select('likes_count')
+        .eq('id', postId)
+        .single();
+
+      if (error) throw error;
+
+      debugAPI.response(`/posts/${postId}/likes`, 200, data);
+      return { data: { like_count: data.likes_count }, error: null };
+    } catch (error) {
+      debugError(error, 'postsService.getPostLikes');
       return { data: null, error };
     }
   }
@@ -364,17 +503,36 @@ export const categoriesService = {
   async getCategories() {
     try {
       debugAPI.request('/categories', 'GET');
+      console.log("🔄 [categoriesService] Fetching categories from Supabase...");
+      console.log("🔧 [categoriesService] Supabase client:", supabase);
+      console.log("🔧 [categoriesService] Supabase URL:", supabase.supabaseUrl);
       
       const { data, error } = await supabase
         .from('categories')
         .select('*')
         .order('name');
 
-      if (error) throw error;
+      console.log("🔍 [categoriesService] Raw Supabase response:", { data, error });
 
+      if (error) {
+        console.error("❌ [categoriesService] Supabase error:", error);
+        throw error;
+      }
+
+      console.log("✅ [categoriesService] Categories fetched successfully:", data);
+      console.log("📊 [categoriesService] Categories count:", data?.length || 0);
+      
+      if (data && data.length > 0) {
+        console.log("📝 [categoriesService] Categories details:", data.map(cat => ({
+          id: cat.id,
+          name: cat.name
+        })));
+      }
+      
       debugAPI.response('/categories', 200, data);
       return { data: data || [], error: null };
     } catch (error) {
+      console.error("💥 [categoriesService] Error in getCategories:", error);
       debugError(error, 'categoriesService.getCategories');
       return { data: null, error };
     }

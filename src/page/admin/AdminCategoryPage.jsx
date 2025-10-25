@@ -1,4 +1,4 @@
-/* eslint-disable react/prop-types */
+
 import { PenSquare, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,18 +38,32 @@ export default function AdminCategoryManagementPage() {
     const fetchCategories = async () => {
       try {
         setIsLoading(true);
-        debugComponent("AdminCategoryPage", "Fetching categories");
+        console.log("🔄 [AdminCategoryPage] Fetching categories from Supabase...");
         
-        const result = await categoriesService.getCategories();
-        if (result.error) {
-          throw result.error;
+        const { data: categoriesData, error: categoriesError } = await categoriesService.getCategories();
+        
+        console.log("🔍 [AdminCategoryPage] Raw response:", { categoriesData, categoriesError });
+        
+        if (categoriesError) {
+          console.error("❌ [AdminCategoryPage] Categories error:", categoriesError);
+          throw categoriesError;
         }
-        setCategories(result.data || []);
+
+        console.log("✅ [AdminCategoryPage] Categories data:", categoriesData);
+        console.log("📊 [AdminCategoryPage] Categories count:", categoriesData?.length || 0);
         
-        debugComponent("AdminCategoryPage", "Categories fetched successfully");
+        if (categoriesData && categoriesData.length > 0) {
+          console.log("📝 [AdminCategoryPage] First category:", categoriesData[0]);
+        } else {
+          console.log("⚠️ [AdminCategoryPage] No categories found in database");
+        }
+        
+        setCategories(categoriesData || []);
       } catch (error) {
         debugError(error, "fetchCategories");
-        console.error("Error fetching categories data:", error);
+        console.error("💥 [AdminCategoryPage] Error fetching categories data:", error);
+        console.error("💥 [AdminCategoryPage] Error message:", error.message);
+        console.error("💥 [AdminCategoryPage] Error details:", error);
         navigate("*");
       } finally {
         setIsLoading(false);
@@ -58,6 +72,36 @@ export default function AdminCategoryManagementPage() {
 
     fetchCategories();
   }, [navigate]);
+
+  // Listen for categoriesUpdated event
+  useEffect(() => {
+    const handleCategoriesUpdate = async (event) => {
+      console.log("📡 [AdminCategoryPage] Received categoriesUpdated event:", event.detail);
+      
+      try {
+        // Refetch categories when event is received
+        console.log("🔄 [AdminCategoryPage] Refetching categories...");
+        const { data: categoriesData, error: categoriesError } = await categoriesService.getCategories();
+
+        if (categoriesError) {
+          console.error("❌ [AdminCategoryPage] Categories refetch error:", categoriesError);
+          return;
+        }
+
+        console.log("✅ [AdminCategoryPage] Categories refetched:", categoriesData);
+        console.log("📊 [AdminCategoryPage] New categories count:", categoriesData?.length || 0);
+        setCategories(categoriesData || []);
+      } catch (error) {
+        console.error("💥 [AdminCategoryPage] Error refetching categories:", error);
+      }
+    };
+
+    window.addEventListener('categoriesUpdated', handleCategoriesUpdate);
+    
+    return () => {
+      window.removeEventListener('categoriesUpdated', handleCategoriesUpdate);
+    };
+  }, []);
 
   useEffect(() => {
     const filtered = categories.filter((category) =>
@@ -69,11 +113,24 @@ export default function AdminCategoryManagementPage() {
   const handleDelete = async (categoryId) => {
     try {
       setIsLoading(true);
-      const result = await categoriesService.deleteCategory(categoryId);
+      console.log("🔄 [AdminCategoryPage] Deleting category from Supabase...");
+      console.log("📤 [AdminCategoryPage] Category ID:", categoryId);
       
-      if (result.error) {
-        throw result.error;
+      const { error } = await categoriesService.deleteCategory(categoryId);
+
+      if (error) {
+        console.error("❌ [AdminCategoryPage] Delete error:", error);
+        throw error;
       }
+
+      console.log("✅ [AdminCategoryPage] Category deleted successfully");
+      
+      // Dispatch event เพื่อบอก components อื่นว่ามีการลบ category
+      window.dispatchEvent(new CustomEvent('categoriesUpdated', { 
+        detail: { categoryId, action: 'delete' } 
+      }));
+      console.log("📡 [AdminCategoryPage] Dispatched categoriesUpdated event (delete)");
+      
       toast.custom((t) => (
         <div className="bg-green-500 text-white p-4 rounded-sm flex justify-between items-start">
           <div>
@@ -127,7 +184,7 @@ export default function AdminCategoryManagementPage() {
           <h2 className="text-2xl font-semibold">Category management</h2>
           <Button
             className="px-8 py-2 rounded-full"
-            onClick={() => navigate("/admin/category-management/create")}
+            onClick={() => navigate("/admin/create-category")}
           >
             <PenSquare className="mr-2 h-4 w-4" /> Create category
           </Button>
@@ -174,7 +231,7 @@ export default function AdminCategoryManagementPage() {
                       size="sm"
                       onClick={() => {
                         navigate(
-                          `/admin/category-management/edit/${category.id}`
+                          `/admin/edit-category/${category.id}`
                         );
                       }}
                     >

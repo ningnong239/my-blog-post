@@ -64,11 +64,17 @@ export default function SignUpPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log("🔄 [SignUpPage] Form submitted");
+    console.log("📤 [SignUpPage] Form values:", formValues);
+    
     const errors = validateInputs();
+    console.log("🔍 [SignUpPage] Validation errors:", errors);
     setFormErrors(errors);
 
     if (Object.keys(errors).length === 0) {
+      console.log("✅ [SignUpPage] No validation errors, calling register...");
       const result = await register(formValues);
+      console.log("📥 [SignUpPage] Register result:", result);
       if (result?.error) {
         let suggestionMessage = "";
 
@@ -99,7 +105,31 @@ export default function SignUpPage() {
             </button>
           </div>
         ));
+      } else {
+        // Registration successful, navigate to success page
+        navigate("/signup-success");
       }
+    } else {
+      console.log("⚠️ [SignUpPage] Validation errors found, not attempting registration");
+      // Show validation error toast
+      toast.custom((t) => (
+        <div className="bg-yellow-500 text-white p-4 rounded-sm flex justify-between items-start">
+          <div>
+            <h2 className="font-bold text-lg mb-1">Please fix the following errors:</h2>
+            <ul className="text-sm list-disc list-inside">
+              {Object.values(errors).map((error, index) => (
+                <li key={index}>{error}</li>
+              ))}
+            </ul>
+          </div>
+          <button
+            onClick={() => toast.dismiss(t)}
+            className="text-white hover:text-gray-200"
+          >
+            <X size={20} />
+          </button>
+        </div>
+      ));
     }
   };
 

@@ -13,6 +13,7 @@ import {
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { authAPI } from "@/config/api";
 
 export default function AdminResetPasswordPage() {
   const [password, setPassword] = useState("");
@@ -50,13 +51,10 @@ export default function AdminResetPasswordPage() {
 
       // Make API call to reset the password using JWT interceptor
 
-      const response = await axios.put(
-        `http://localhost:4001/auth/reset-password`,
-        {
-          oldPassword: password,
-          newPassword: newPassword,
-        }
-      );
+      const response = await authAPI.resetPassword({
+        oldPassword: password,
+        newPassword: newPassword,
+      });
 
       // Handle successful response
       if (response.status === 200) {

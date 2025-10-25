@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { useAuth } from "@/contexts/authentication";
 import { toast } from "sonner";
-import { authService } from "@/services/supabaseService";
+import { supabase } from "@/lib/supabase";
 
 export default function AdminProfilePage() {
   const { state, fetchUser } = useAuth();
@@ -118,24 +118,27 @@ export default function AdminProfilePage() {
     try {
       setIsSaving(true);
 
-      const formData = new FormData();
-      formData.append("name", profile.name);
-      formData.append("username", profile.username);
+      console.log("🔄 [AdminProfilePage] Updating admin profile with Supabase...");
+      console.log("📤 [AdminProfilePage] Profile data:", profile);
 
-      if (imageFile) {
-        formData.append("imageFile", imageFile);
-      }
-
-      // Update profile using Supabase
-      const result = await authService.updateProfile(state.user.id, {
-        name: profile.name,
-        username: profile.username,
-        profile_pic: profile.image
+      // Update user metadata in Supabase
+      const { data, error } = await supabase.auth.updateUser({
+        data: {
+          full_name: profile.name,
+          username: profile.username,
+          avatar_url: profile.image
+        }
       });
 
-      if (result.error) {
-        throw result.error;
+      if (error) {
+        console.error("❌ [AdminProfilePage] Supabase update error:", error);
+        throw new Error(error.message);
       }
+
+      console.log("✅ [AdminProfilePage] Admin profile updated successfully:", data);
+
+      // Refresh user data
+      await fetchUser();
 
       toast.custom((t) => (
         <div className="bg-green-500 text-white p-4 rounded-sm flex justify-between items-start">
@@ -153,12 +156,13 @@ export default function AdminProfilePage() {
           </button>
         </div>
       ));
-    } catch {
+    } catch (error) {
+      console.error("💥 [AdminProfilePage] Profile update error:", error);
       toast.custom((t) => (
         <div className="bg-red-500 text-white p-4 rounded-sm flex justify-between items-start">
           <div>
             <h2 className="font-bold text-lg mb-1">Failed to update profile</h2>
-            <p className="text-sm">Please try again later.</p>
+            <p className="text-sm">{error.message || "Please try again later."}</p>
           </div>
           <button
             onClick={() => toast.dismiss(t)}
@@ -170,7 +174,6 @@ export default function AdminProfilePage() {
       ));
     } finally {
       setIsSaving(false);
-      fetchUser();
     }
   };
   return (

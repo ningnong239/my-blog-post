@@ -195,18 +195,5 @@ Playing games helps build focus, quick problem-solving, and decision-making abil
 
 Enjoy playing games responsibly—they can be both fun and a great way to learn English! 🎮`,
   },
-  {
-    id: 5,
-    image:
-      "https://i.ytimg.com/vi/X1tBEKFYKJg/maxresdefault.jpg",
-    category: "General",
-    title: "The Power of Habits: Small Changes, Big Results",
-    description:
-      "Discover how small, consistent habits can lead to significant personal and professional growth over time.",
-    author: "Naiyana T.",
-    date: "18 October 2025",
-    likes: 515,
-    content:
-      "## 1. Understanding Habit Formation\n\nLearn the science behind habit formation and why habits are so powerful in shaping our lives.\n\n## 2. Identifying Key Habits\n\nDiscover how to identify the habits that will have the most significant impact on your goals.\n\n## 3. Building Positive Habits\n\nExplore strategies for successfully implementing and maintaining positive habits.\n\n## 4. Breaking Bad Habits\n\nLearn effective techniques for identifying and breaking detrimental habits.\n\n## 5. Habit Stacking\n\nUnderstand how to use habit stacking to make new habits easier to adopt and maintain.",
-  },
+  
 ];
