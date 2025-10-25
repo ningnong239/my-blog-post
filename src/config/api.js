@@ -1,6 +1,9 @@
 // API Configuration
 export const API_BASE_URL = 'https://myblogpostserver.vercel.app';
 
+// Import Supabase services
+import { postsService, categoriesService } from '@/services/supabaseService';
+
 // Legacy API endpoints (for backward compatibility)
 export const API_ENDPOINTS = {
   // Auth endpoints
@@ -135,13 +138,26 @@ export const authAPI = {
 export const postsAPI = {
   // Get all posts
   getAll: async (params = {}) => {
-    const result = await postsService.getPosts(params);
+    console.log("🚀 [postsAPI.getAll] Starting API call with params:", params);
     
-    if (result.error) {
-      throw new Error(result.error.message || 'Failed to fetch posts');
+    try {
+      const result = await postsService.getPosts(params);
+      console.log("📊 [postsAPI.getAll] Supabase service result:", result);
+      
+      if (result.error) {
+        console.error("❌ [postsAPI.getAll] Supabase service error:", result.error);
+        throw new Error(result.error.message || 'Failed to fetch posts');
+      }
+      
+      console.log("✅ [postsAPI.getAll] Successfully fetched posts:", result.data);
+      console.log("📈 [postsAPI.getAll] Posts count:", result.data?.posts?.length || 0);
+      console.log("📈 [postsAPI.getAll] Total count:", result.data?.totalCount || 0);
+      
+      return result.data;
+    } catch (error) {
+      console.error("💥 [postsAPI.getAll] API call failed:", error);
+      throw error;
     }
-    
-    return result.data;
   },
 
   // Get post by ID
@@ -249,13 +265,25 @@ export const postsAPI = {
 export const categoriesAPI = {
   // Get all categories
   getAll: async () => {
-    const result = await categoriesService.getCategories();
+    console.log("🚀 [categoriesAPI.getAll] Starting categories API call");
     
-    if (result.error) {
-      throw new Error(result.error.message || 'Failed to fetch categories');
+    try {
+      const result = await categoriesService.getCategories();
+      console.log("📊 [categoriesAPI.getAll] Supabase service result:", result);
+      
+      if (result.error) {
+        console.error("❌ [categoriesAPI.getAll] Supabase service error:", result.error);
+        throw new Error(result.error.message || 'Failed to fetch categories');
+      }
+      
+      console.log("✅ [categoriesAPI.getAll] Successfully fetched categories:", result.data);
+      console.log("📈 [categoriesAPI.getAll] Categories count:", result.data?.length || 0);
+      
+      return result.data;
+    } catch (error) {
+      console.error("💥 [categoriesAPI.getAll] API call failed:", error);
+      throw error;
     }
-    
-    return result.data;
   },
 
   // Get category by ID
@@ -365,8 +393,6 @@ export const profileAPI = {
 // Export Supabase services for direct use
 export { 
   authService, 
-  postsService, 
-  categoriesService, 
   commentsService,
   initializeDatabase 
 } from '@/services/supabaseService';

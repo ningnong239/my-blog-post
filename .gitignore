@@ -14,6 +14,7 @@ dist-ssr
 .env
 .env.local
 VERCEL_ENVIRONMENT
+Readmeth.md
 
 # Editor directories and files
 .vscode/*
@@ -28,4 +29,4 @@ VERCEL_ENVIRONMENT
 
 SUPABASE_SETUP.md
 SIGIN_TROUBLESHOOTING.md
-database/*
+database
