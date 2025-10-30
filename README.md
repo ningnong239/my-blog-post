@@ -137,9 +137,6 @@ npm run lint
 - **Tailwind CSS** for utility-first styling
 - **React Router** for client-side routing
 
-## 📄 License
-
-This project is open source and available under the [MIT License](LICENSE).
 
 ## 🤝 Contributing
 
@@ -148,10 +145,4 @@ This project is open source and available under the [MIT License](LICENSE).
 3. Make your changes
 4. Submit a pull request
 
-## 📞 Support
 
-For support and questions, please open an issue in the repository.
-
----
-
-**Built with ❤️ using React, Vite, and Supabase**
