@@ -52,3 +52,4 @@ setup_statuses.sql
 setup_storage.sql
 setup_users_rls.sql
 use_existing_users.sql
+fix_posts_rls_final.sql
