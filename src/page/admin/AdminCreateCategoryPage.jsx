@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AdminSidebar } from "@/components/AdminSidebar";
@@ -7,12 +7,79 @@ import { toast } from "sonner";
 import { X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
+import { postsService } from "@/services/supabaseService";
 
 export default function AdminCreateCategoryPage() {
   const navigate = useNavigate();
   const [categoryName, setCategoryName] = useState(""); // To hold category name input
   const [isSaving, setIsSaving] = useState(false); // To manage saving state
   const [errorMessage, setErrorMessage] = useState("");
+  const [allPosts, setAllPosts] = useState([]); // เก็บ posts ทั้งหมด
+  const [isLoadingPosts, setIsLoadingPosts] = useState(false); // สถานะการโหลด posts
+
+  // ===== เพิ่ม useEffect เพื่อดึง Posts ทั้งหมด =====
+  useEffect(() => {
+    const fetchAllPosts = async () => {
+      try {
+        setIsLoadingPosts(true);
+        console.log("🔄 [AdminCreateCategory] Fetching all posts from Supabase...");
+        console.log("📡 [AdminCreateCategory] Calling postsService.getPosts()...");
+        
+        const postsResult = await postsService.getPosts({
+          page: 1,
+          limit: 100, // ดึงมาเยอะๆ เพื่อดูทั้งหมด
+        });
+
+        console.log("📦 [AdminCreateCategory] ===== GET ALL POSTS RESULT =====");
+        console.log("✅ [AdminCreateCategory] Posts API connected successfully!");
+        console.log("📊 [AdminCreateCategory] Full result:", postsResult);
+        
+        if (postsResult.error) {
+          console.error("❌ [AdminCreateCategory] Posts error:", postsResult.error);
+        } else if (postsResult.data) {
+          console.log("📝 [AdminCreateCategory] Posts data:", postsResult.data);
+          console.log("📈 [AdminCreateCategory] Total posts count:", postsResult.data.posts?.length || 0);
+          console.log("📈 [AdminCreateCategory] Total pages:", postsResult.data.totalPages);
+          console.log("📈 [AdminCreateCategory] Current page:", postsResult.data.currentPage);
+          console.log("📈 [AdminCreateCategory] Has more:", postsResult.data.hasMore);
+          
+          // แสดงโพสต์แต่ละตัว
+          if (postsResult.data.posts && postsResult.data.posts.length > 0) {
+            console.log("📋 [AdminCreateCategory] ===== LIST OF ALL POSTS =====");
+            postsResult.data.posts.forEach((post, index) => {
+              console.log(`📄 [AdminCreateCategory] Post #${index + 1}:`, {
+                id: post.id,
+                title: post.title,
+                category: post.categories?.name,
+                category_id: post.category_id,
+                status_id: post.status_id,
+                likes_count: post.likes_count,
+                date: post.date,
+                description: post.description?.substring(0, 50) + "...",
+              });
+            });
+            console.log("📋 [AdminCreateCategory] ===== END OF POSTS LIST =====");
+          } else {
+            console.log("⚠️ [AdminCreateCategory] No posts found in database");
+          }
+          
+          setAllPosts(postsResult.data.posts || []);
+        }
+        console.log("🎉 [AdminCreateCategory] ===== FETCH COMPLETED =====");
+
+      } catch (error) {
+        console.error("💥 [AdminCreateCategory] Error fetching posts:", error);
+        console.error("💥 [AdminCreateCategory] Error details:", {
+          message: error.message,
+          stack: error.stack,
+        });
+      } finally {
+        setIsLoadingPosts(false);
+      }
+    };
+
+    fetchAllPosts();
+  }, []); // Run once on component mount
 
   const handleSave = async () => {
     if (!categoryName) {
@@ -36,6 +103,12 @@ export default function AdminCreateCategoryPage() {
 
       if (error) {
         console.error("❌ [AdminCreateCategory] Create error:", error);
+        console.error("❌ [AdminCreateCategory] Error details:", {
+          message: error.message,
+          code: error.code,
+          hint: error.hint,
+          details: error.details,
+        });
         throw error;
       }
 
