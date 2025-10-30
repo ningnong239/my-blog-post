@@ -33,9 +33,10 @@ export default function AdminCreateArticlePage() {
   const [isSaving, setIsSaving] = useState(null);
   const [categories, setCategories] = useState([]);
   const [imageFile, setImageFile] = useState({});
+  const [allPosts, setAllPosts] = useState([]); // เก็บ posts ทั้งหมด
 
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchCategoriesAndPosts = async () => {
       try {
         setIsLoading(true);
         console.log("🔄 [AdminCreateArticle] Fetching categories from Supabase...");
@@ -49,15 +50,66 @@ export default function AdminCreateArticlePage() {
 
         console.log("✅ [AdminCreateArticle] Categories data:", categoriesData);
         setCategories(categoriesData || []);
+
+        // ===== เพิ่มส่วนดึง Posts ทั้งหมด =====
+        console.log("🔄 [AdminCreateArticle] Fetching all posts from Supabase...");
+        console.log("📡 [AdminCreateArticle] Calling postsService.getPosts()...");
+        
+        const postsResult = await postsService.getPosts({
+          page: 1,
+          limit: 100, // ดึงมาเยอะๆ เพื่อดูทั้งหมด
+        });
+
+        console.log("📦 [AdminCreateArticle] ===== GET ALL POSTS RESULT =====");
+        console.log("✅ [AdminCreateArticle] Posts API connected successfully!");
+        console.log("📊 [AdminCreateArticle] Full result:", postsResult);
+        
+        if (postsResult.error) {
+          console.error("❌ [AdminCreateArticle] Posts error:", postsResult.error);
+        } else if (postsResult.data) {
+          console.log("📝 [AdminCreateArticle] Posts data:", postsResult.data);
+          console.log("📈 [AdminCreateArticle] Total posts count:", postsResult.data.posts?.length || 0);
+          console.log("📈 [AdminCreateArticle] Total pages:", postsResult.data.totalPages);
+          console.log("📈 [AdminCreateArticle] Current page:", postsResult.data.currentPage);
+          console.log("📈 [AdminCreateArticle] Has more:", postsResult.data.hasMore);
+          
+          // แสดงโพสต์แต่ละตัว
+          if (postsResult.data.posts && postsResult.data.posts.length > 0) {
+            console.log("📋 [AdminCreateArticle] ===== LIST OF ALL POSTS =====");
+            postsResult.data.posts.forEach((post, index) => {
+              console.log(`📄 [AdminCreateArticle] Post #${index + 1}:`, {
+                id: post.id,
+                title: post.title,
+                category: post.categories?.name,
+                category_id: post.category_id,
+                status_id: post.status_id,
+                likes_count: post.likes_count,
+                date: post.date,
+                description: post.description?.substring(0, 50) + "...",
+              });
+            });
+            console.log("📋 [AdminCreateArticle] ===== END OF POSTS LIST =====");
+          } else {
+            console.log("⚠️ [AdminCreateArticle] No posts found in database");
+          }
+          
+          setAllPosts(postsResult.data.posts || []);
+        }
+        console.log("🎉 [AdminCreateArticle] ===== FETCH COMPLETED =====");
+
       } catch (error) {
-        console.error("Error fetching categories data:", error);
+        console.error("💥 [AdminCreateArticle] Error fetching data:", error);
+        console.error("💥 [AdminCreateArticle] Error details:", {
+          message: error.message,
+          stack: error.stack,
+        });
         navigate("*");
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchCategories();
+    fetchCategoriesAndPosts();
   }, [navigate]);
 
   // Listen for categoriesUpdated event

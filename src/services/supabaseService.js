@@ -321,7 +321,7 @@ export const postsService = {
         .insert([postData])
         .select(`
           *,
-          categories(name),
+          categories(name)
         `)
         .single();
 
@@ -346,7 +346,7 @@ export const postsService = {
         .eq('id', postId)
         .select(`
           *,
-          categories(name),
+          categories(name)
         `)
         .single();
 
